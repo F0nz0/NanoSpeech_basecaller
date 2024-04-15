@@ -365,8 +365,6 @@ if __name__ == "__main__":
             fast5list_filepath = True
         elif fast5list_filepath == "False":
             fast5list_filepath = False
-        else:
-            print(f"ERROR!! fast5list_filepath has to be either True or False")
     readslist_filepath = args.readslist_filepath
     if type(readslist_filepath) == str:
         if readslist_filepath == "True":
