@@ -57,8 +57,9 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
         with open(readslist_filepath, "r") as readslist_file:
             for _l_ in readslist_file:
                 readslist.append(_l_.rstrip())
-        print(f"\n[{datetime.now()}] A total of {len(readslist)} reads have been detected into reads list file. Basecalling will be limited on these ids.", flush=True)
-            
+        n_reads_to_process = len(readslist)
+        print(f"\n[{datetime.now()}] A total of {n_reads_to_process} reads have been detected into reads list file. Basecalling will be limited on these ids.", flush=True)
+
     ### start iteration across fast5s into input fast5_folder ###
     print(f"[{datetime.now()}] [Producer Message] Starting basecalling on reads into fast5 files...", flush=True) 
     with tqdm(total=total_fast5_detected, file=sys.stdout, desc="Fast5s processed:") as pbar:
@@ -372,8 +373,6 @@ if __name__ == "__main__":
             readslist_filepath = True
         elif readslist_filepath == "False":
             readslist_filepath = False
-        else:
-            print(f"ERROR!! readslist_filepath has to be either True or False")
 
     # print some starting info related to version, used program and to the input arguments
     print(f"[{datetime.now()}] NanoSpeech_basecaller version: {__version__}", flush=True)
