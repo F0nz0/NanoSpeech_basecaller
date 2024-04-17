@@ -92,8 +92,17 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
                                 print(f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}", flush=True)
                                 print(f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}", flush=True)
                                 break
+                if n_reads_to_process:
+                    if reads_processed_counter / n_reads_to_process % 0.1 == 0:
+                        print(f"\n[{datetime.now()}] [Producer Message] Reads processed {reads_processed_counter}/{n_reads_to_process} ({round(100*(reads_processed_counter/n_reads_to_process),2)}).", flush=True)
+                    if reads_processed_counter == n_reads_to_process:
+                        print(f"\n[{datetime.now()}] [Producer Message] Reached requester amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.", flush=True)
+                        print(f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}", flush=True)
+                        print(f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}", flush=True)
+                        break
                 pbar.update(1)
     # append end signal for every consumer
+    print(f"\n[{datetime.now()}] [Producer Message] Producing end pills for consumers/workers", flush=True)
     for t in range(threads_n):
         q.put(None)
 
