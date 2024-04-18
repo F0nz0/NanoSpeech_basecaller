@@ -8,6 +8,8 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 from datetime import datetime
+from ont_fast5_api.fast5_interface import get_fast5_file
+from math import ceil
 
 # some needed functions
 def pA_to_audio(pA_chunk):
