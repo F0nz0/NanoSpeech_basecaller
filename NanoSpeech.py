@@ -16,7 +16,7 @@ import math
 import pandas as pd
 import numpy as np
 from multiprocessing import Queue, Process, Value
-
+from math import ceil
 
 def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None):
     print(f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5 files into input folder.", flush=True)
