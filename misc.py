@@ -12,6 +12,33 @@ from ont_fast5_api.fast5_interface import get_fast5_file
 from math import ceil
 
 # some needed functions
+def generate_chunks(pA_data, chunks_len, shift=None):
+    length = len(pA_data)
+    if shift == None:
+        shift=chunks_len
+    n_chunks = ceil(length/chunks_len)
+    start = 0
+    for n,w in enumerate(range(n_chunks)):
+        chunk = pA_data[start:start+chunks_len]
+        start = start+chunks_len
+        if len(chunk) == chunks_len:
+            if n == 0:
+                X = chunk
+            else:
+                X = np.vstack((X,chunk))
+    return X
+
+
+def generator_consumer(X):
+    for c,audio in enumerate(X):
+        try:
+            audio_ds = pA_to_audio(audio)
+        except:
+            print(f"EXCEPTION during conversion of audio via FT at chunk n° {c+1}/{X.shape[0]}:", audio, len(audio), file=sys.stderr)
+        yield audio_ds
+
+
+
 def pA_to_audio(pA_chunk):
     # eliminate nan before stft operation
     pA_chunk = pA_chunk[~tf.math.is_nan(pA_chunk)]

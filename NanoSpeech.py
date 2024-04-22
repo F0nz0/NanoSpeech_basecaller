@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 from datetime import datetime
 from joblib import load
 from model import Transformer, CustomSchedule, VectorizeChar, initialize_model
-from misc import generator, convert_ItoA, raw_to_pA, phred_score_to_symbol, create_tf_dataset, create_tf_dataset_basecaller
+from misc import generator, convert_ItoA, raw_to_pA, phred_score_to_symbol, create_tf_dataset, create_tf_dataset_basecaller, generate_chunks, generator_consumer
 from __init__ import __version__
 import argparse
 from tqdm import tqdm
@@ -80,8 +80,9 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
                         # clip pA_data for outlier with mean value
                         currents_chunk_df = pd.Series(pA_data) # convert to pandas series
                         currents_chunk_df[(currents_chunk_df<clip_outliers[0])|(currents_chunk_df>clip_outliers[1])] = round(currents_chunk_df.mean(), 3) # clip outliers to the average values of the current chunk
-                        pA_data = currents_chunk_df.tolist() # come back to list for subsequent operation                          
-                        q.put([read_name_id, fast5_fullpath, pA_data])
+                        pA_data = currents_chunk_df.values
+                        X = generate_chunks(pA_data[::-1], chunks_len=3200)
+                        q.put([read_name_id, fast5_fullpath, X])
                         reads_processed_counter += 1
                         # block producer if required
                         if n_reads_to_process:
@@ -142,9 +143,13 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
         if prod_out != None:
             read_name_id = prod_out[0]
             fast5_fullpath = prod_out[1]
-            pA_data = prod_out[2]
-            X = generator(pA_data[::-1], chunks_len=3200)
-            ds = create_tf_dataset_basecaller(X, bs=512)
+            X = prod_out[2]
+            #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]", read_name_id, X.shape) ##########!!!!!!!
+            #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]", X) ##########!!!!!!!
+            #ds = create_tf_dataset_basecaller(X, bs=512)
+            ds = tf.data.Dataset.from_generator(generator_consumer, args=[X], output_types=(tf.float32), output_shapes = ((971,126)), )
+            ds = ds.batch(6)
+            #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]\t", read_name_id, ds) ##########!!!!!!!
             if print_gpu_memory:
                 print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] GPU memory in use: {round(tf.config.experimental.get_memory_info('GPU:0')['current']/1024/1024/1024, 4)} GB", file=sys.stderr, flush=True)
             # make predictions for current read using pA signals
@@ -159,7 +164,11 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                 if extention == "fasta":
                     ### FASTA CODE...
                     # generate prediction and convert to text version
-                    pred = model.generate(i, 1)
+                    try:
+                        pred = model.generate(i, 1)
+                    except:
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
+                        continue
                     for p in pred:
                         c+=1
                         prediction = ""
@@ -172,15 +181,19 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                             # asses if predicted bases are inside a list of allowed nucleotides
                             if set( [i in ["a","c","g","t","i"] for i in set(prediction[1:-1])] ) == {True}:
                                 PREDS.append(prediction[1:-1])
-                            else:
-                                print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                        else:
-                            print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                            #else:
+                            #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                        #else:
+                        #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
                 
                 elif extention == "fastq":
                     ### FASTQ CODE...
                     # generate prediction and convert to text version
-                    pred, prob = model.generate(i, 1, return_proba=True)
+                    try:
+                        pred, prob = model.generate(i, 1, return_proba=True)
+                    except:
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
+                        continue
                     for p,p_ in zip(pred, prob): # p -> prediction, p_ -> probabilities
                         c+=1
                         prediction = ""
@@ -203,10 +216,10 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                             if set( [i in ["a","c","g","t","i"] for i in set(prediction[1:-1])] ) == {True}:
                                 PREDS.append(prediction[1:-1])
                                 PROBS.append(phred_scores[:-1]) # lack of ">" start symbol
-                            else:
-                                print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                        else:
-                            print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                            #else:
+                        #        print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                        #else:
+                        #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
                             
             # join to create the final merged output read (in fasta or fastq format as request with the output filename extention)
             # assess if NO_START_OR_STOP
