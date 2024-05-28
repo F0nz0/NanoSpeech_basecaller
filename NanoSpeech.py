@@ -18,7 +18,7 @@ import numpy as np
 from multiprocessing import Queue, Process, Value
 from math import ceil
 
-def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None):
+def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None, chunks_len=2800):
     print(f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5 files into input folder.", flush=True)
     total_fast5_detected = 0
     fast5_processed = 0
@@ -81,7 +81,7 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
                         currents_chunk_df = pd.Series(pA_data) # convert to pandas series
                         currents_chunk_df[(currents_chunk_df<clip_outliers[0])|(currents_chunk_df>clip_outliers[1])] = round(currents_chunk_df.mean(), 3) # clip outliers to the average values of the current chunk
                         pA_data = currents_chunk_df.values
-                        X = generate_chunks(pA_data[::-1], chunks_len=3200)
+                        X = generate_chunks(pA_data[::-1], chunks_len=chunks_len)
                         q.put([read_name_id, fast5_fullpath, X])
                         reads_processed_counter += 1
                         # block producer if required
@@ -250,7 +250,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
 
 def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = [30,175], print_gpu_memory=False, 
                print_read_name = False, n_reads_to_process = None, n_models = 1, fast5list_filepath = None, 
-               readslist_filepath = None):
+               readslist_filepath = None, chunks_len = 2800):
     print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller v.4 (spectrogram from fast5)", flush=True)
     # detect extention of output file and if it has the right type
     extention = os.path.splitext(out_filepath)[1][1:].lower()
@@ -276,9 +276,9 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = [3
     for c in consumers:
         c.start()
     # create a producer process
-    # fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None
+    # fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None, chunks_len=2800
     p = Process(target=producer, args=(fast5_folderpath, q, n_models, clip_outliers, n_reads_to_process, 
-                                       print_read_name, fast5list_filepath, readslist_filepath))
+                                       print_read_name, fast5list_filepath, readslist_filepath, chunks_len))
     p.start()
     
     # join consumers
@@ -354,6 +354,12 @@ if __name__ == "__main__":
                         required=False,
                         default=None,
                         help="--readslist_filepath: \n <str> Fullpath for a file with list of reads ids to limit basecalling on. [None]")
+    parser.add_argument("-cl",
+                        "--chunks_len",
+                        required=False,
+                        default=2800,
+                        type=int,
+                        help="--chunks_len: \n <int> Chunks lenght the generator will be output from raw signals. [2800]")
 
     args = parser.parse_args()
     fast5_folderpath = args.fast5_folderpath
@@ -393,6 +399,8 @@ if __name__ == "__main__":
             readslist_filepath = True
         elif readslist_filepath == "False":
             readslist_filepath = False
+    chunks_len = args.chunks_len
+
 
     # print some starting info related to version, used program and to the input arguments
     print(f"[{datetime.now()}] NanoSpeech_basecaller version: {__version__}", flush=True)
@@ -410,4 +418,5 @@ if __name__ == "__main__":
                n_reads_to_process = n_reads_to_process, 
                n_models = n_models, 
                fast5list_filepath = fast5list_filepath, 
-               readslist_filepath = readslist_filepath)
+               readslist_filepath = readslist_filepath,
+               chunks_len = chunks_len)
