@@ -265,7 +265,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
 def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = [30,175], print_gpu_memory=False, 
                print_read_name = False, n_reads_to_process = None, n_models = 1, fast5list_filepath = None, 
                readslist_filepath = None, chunks_len = 2800, print_chunks_idxs = None):
-    print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller v.4 (spectrogram from fast5)", flush=True)
+    print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller (spectrogram from fast5)", flush=True)
     # detect extention of output file and if it has the right type
     extention = os.path.splitext(out_filepath)[1][1:].lower()
     out_folderpath = os.path.splitext(out_filepath)[0]
