@@ -107,7 +107,7 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
     for t in range(threads_n):
         q.put(None)
 
-def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None):
+def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None):
     import tensorflow as tf
     tf.get_logger().setLevel('ERROR')
     # limit gpu usage per model
@@ -154,13 +154,15 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                 print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] GPU memory in use: {round(tf.config.experimental.get_memory_info('GPU:0')['current']/1024/1024/1024, 4)} GB", file=sys.stderr, flush=True)
             # make predictions for current read using pA signals
             PREDS=[]
+            ENDS_OF_CHUNKS = []
             if extention == "fastq":
                 PROBS = []
             target_end_token_idx = 2
             idx_to_char = vectorizer.get_vocabulary()
             c=0
+            last_end_of_chunk = -1 # a counter to take trace of the last end of the chunk (0-based)
             for i in ds:
-                
+
                 if extention == "fasta":
                     ### FASTA CODE...
                     # generate prediction and convert to text version
@@ -169,6 +171,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                     except:
                         print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
                         continue
+                    
                     for p in pred:
                         c+=1
                         prediction = ""
@@ -181,11 +184,15 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                             # asses if predicted bases are inside a list of allowed nucleotides
                             if set( [i in ["a","c","g","t","i"] for i in set(prediction[1:-1])] ) == {True}:
                                 PREDS.append(prediction[1:-1])
-                            #else:
-                            #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                        #else:
-                        #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                
+                                last_end_of_chunk += len(prediction[1:-1])
+                                ENDS_OF_CHUNKS.append(last_end_of_chunk)
+                            else:
+                                #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                                ENDS_OF_CHUNKS.append(-2)
+                        else:
+                            #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                            ENDS_OF_CHUNKS.append(-1)
+
                 elif extention == "fastq":
                     ### FASTQ CODE...
                     # generate prediction and convert to text version
@@ -216,10 +223,14 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                             if set( [i in ["a","c","g","t","i"] for i in set(prediction[1:-1])] ) == {True}:
                                 PREDS.append(prediction[1:-1])
                                 PROBS.append(phred_scores[:-1]) # lack of ">" start symbol
-                            #else:
-                        #        print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                        #else:
-                        #    print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                                last_end_of_chunk += len(prediction[1:-1])
+                                ENDS_OF_CHUNKS.append(last_end_of_chunk)
+                            else:
+                                #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                                ENDS_OF_CHUNKS.append(-2)
+                        else:
+                            #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                            ENDS_OF_CHUNKS.append(-1)
                             
             # join to create the final merged output read (in fasta or fastq format as request with the output filename extention)
             # assess if NO_START_OR_STOP
@@ -236,7 +247,10 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                 elif extention == "fastq":
                     # generate the 4 fastq rows and write these into the output file  
                     output.write(f"@{read_name_id} {','.join([str(I_idx) for I_idx in pred_seq_I_idxs])}\n{pred_seq_conv}\n")
-                    output.write("+\n")
+                    if print_chunks_idxs:
+                        output.write(f"+{','.join([str(__i__) for __i__ in ENDS_OF_CHUNKS])}\n")
+                    else:
+                        output.write(f"+\n")
                     output.write(f"{phred_scores_seq}\n")
                     output.flush()
             else:
@@ -250,7 +264,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
 
 def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = [30,175], print_gpu_memory=False, 
                print_read_name = False, n_reads_to_process = None, n_models = 1, fast5list_filepath = None, 
-               readslist_filepath = None, chunks_len = 2800):
+               readslist_filepath = None, chunks_len = 2800, print_chunks_idxs = None):
     print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller v.4 (spectrogram from fast5)", flush=True)
     # detect extention of output file and if it has the right type
     extention = os.path.splitext(out_filepath)[1][1:].lower()
@@ -268,9 +282,9 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = [3
     # create consumers processes
     consumers = []
     for t in range(n_models):
-        # q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None
+        # q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None
         consumers.append( Process(target=consumer_worker, args=(q, t+1, model_weigths, out_folderpath, 
-                                                                extention, print_gpu_memory)))
+                                                                extention, print_gpu_memory, print_chunks_idxs)))
     print(f"[{datetime.now()}] [Main Process Message] Generating requested consumers. N° of Consumers: {len(consumers)}", flush=True)
     # start consumers
     for c in consumers:
@@ -360,6 +374,12 @@ if __name__ == "__main__":
                         default=2800,
                         type=int,
                         help="--chunks_len: \n <int> Chunks lenght the generator will be output from raw signals. [2800]")
+    parser.add_argument("-idxs",
+                        "--print_chunks_idxs",
+                        required=False,
+                        default=None,
+                        type=str,
+                        help="--print_chunks_idxs: \n <bool> Set to True to print 0-based index for the end of chunks in the + line in fastq output [None]")
 
     args = parser.parse_args()
     fast5_folderpath = args.fast5_folderpath
@@ -400,7 +420,12 @@ if __name__ == "__main__":
         elif readslist_filepath == "False":
             readslist_filepath = False
     chunks_len = args.chunks_len
-
+    print_chunks_idxs = args.print_chunks_idxs
+    if type(print_chunks_idxs) == str:
+        if print_chunks_idxs == "True":
+            print_chunks_idxs = True
+        elif print_chunks_idxs == "False":
+            print_chunks_idxs = False
 
     # print some starting info related to version, used program and to the input arguments
     print(f"[{datetime.now()}] NanoSpeech_basecaller version: {__version__}", flush=True)
@@ -419,4 +444,5 @@ if __name__ == "__main__":
                n_models = n_models, 
                fast5list_filepath = fast5list_filepath, 
                readslist_filepath = readslist_filepath,
-               chunks_len = chunks_len)
+               chunks_len = chunks_len,
+               print_chunks_idxs=print_chunks_idxs)
