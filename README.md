@@ -148,7 +148,7 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 		gBlock1	180.0	181.0	09cb072c-1680-4ed3-a3f9-110a7b07f83a	7	+	A
 		gBlock1	193.0	194.0	09cb072c-1680-4ed3-a3f9-110a7b07f83a	7	+	A
 
-	b) genome-space (or transcriptome space) aggregated predictions: it will be named as {bam_file_path}.genome_space.tsv. It is a tabular file, the per-read prediction are grouped by stranded genomic position and the number and frequency of mapped inosines where stored. Each row, representing a given reference coordinate, has 6 columns: region, start (0-based), strand, inosine_count, depth, inosine_frequency. Here an exemple table:
+	B) genome-space (or transcriptome space) aggregated predictions: it will be named as {bam_file_path}.genome_space.tsv. It is a tabular file, the per-read prediction are grouped by stranded genomic position and the number and frequency of mapped inosines where stored. Each row, representing a given reference coordinate, has 6 columns: region, start (0-based), strand, inosine_count, depth, inosine_frequency. Here an exemple table:
 
 		region	start	strand	I_count	depth	I_freq
 		gBlock2	140.0	+	2	21	0.09523809523809523
@@ -161,7 +161,7 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 		gBlock2	159.0	+	1	23	0.043478260869565216
 
 ## **Basic Usage**:
-All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits. Please refer to methods section on the published paper for further details.
+All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits. Even if hundreds if not thousands of dRNA runs with these old chemistry are available and can be re-basecalled using NanoSpeech, we are committed to make the upgrade with the newest 004 pore.
 
 Research Purpose Only.
 
