@@ -1,8 +1,8 @@
 # NanoSpeech basecaller
 
 
-<img src="https://github.com/F0nz0/NanoSpeech_basecaller/blob/master/OIG4.LacWFMr4ivi0OKPCIuqq.jpg" width="200" height="200" text-align="center" />
-image created with Copilot AI <br><br>
+<img src="https://github.com/F0nz0/NanoSpeech_basecaller/blob/master/OIG4.LacWFMr4ivi0OKPCIuqq.jpg" width="200" height="200" text-align="center">
+<sub><sup>image created with Copilot AI</sub></sup><br><br>
 
 
 
