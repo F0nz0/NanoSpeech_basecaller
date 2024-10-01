@@ -1,5 +1,8 @@
 # NanoSpeech basecaller
 
+
+<img src="https://github.com/F0nz0/NanoSpeech_basecaller/blob/master/OIG4.LacWFMr4ivi0OKPCIuqq.jpg" width="200" height="200" text-align="center" />
+
 A new Basecaller software for the single-step direct detection of modified bases during basecalling procedures for direct-RNA runs produced via Oxford NanoPore sequencers. NanoSpeech is based on a Transformer model with an expanded dictionary with respect to canonical-bases only (A,C,G,U,I=Inosine). It provides also utilities for the mapping of these modified bases onto a reference genome or transcriptome providing predictions on both a per-read and a genome-space level (aggregated data).
 
 ## **Required Softwares**:
