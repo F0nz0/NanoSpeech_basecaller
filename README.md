@@ -3,7 +3,7 @@
 <p align="center">
 <img src="https://github.com/F0nz0/NanoSpeech_basecaller/blob/master/OIG4.LacWFMr4ivi0OKPCIuqq.jpg" width="300" height="300" align="center">
 </p>
-<sub><sup>*image created in Copilot by Designer using DALL·E 3 technology</sub></sup><br><br>
+<p align="center"><sub><sup>*image created in Copilot by Designer using DALL·E 3 technology</sub></sup><br><br></p>
 
 
 
