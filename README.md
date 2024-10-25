@@ -101,11 +101,16 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 
 2) Basecalling of fast5 files. 
 
-	It's important to consider at least 3 GB of GPU memory for each parallel thread. For an NVIDIA-A100 40GPU 15 threads shuold be a good amount of parallel models. Here a simple commando to perform inosine-aware basecalling of fast5 from dRNA (002) runs:
+	It's important to consider at least 3 GB of GPU memory for each parallel thread. For an NVIDIA-A100 40GPU 15 threads shuold be a good amount of parallel models. Here a simple command to perform inosine-aware basecalling of fast5 from dRNA (002) runs:
 
 		python3 NanoSpeech.py -d {fast5_folder_path} -o {fasta/fastq output file} -m {model_weigths in ./models/} -t {number of threads}
 
-	NanoSpeech will produce either a fasta or fastq file where a list of indexes of adenosines with higher probability to be inonsines is added in the header of each read.
+	We stronlgy suggest to use the model named *NanoSpeech_Inosine_m23M_e71_d19Mrec.h5* within the ./models directory of this repository. NanoSpeech will produce either a fasta or fastq file where a list of indexes of adenosines with higher probability to be inonsines is added in the header of each read. For the sake of example, below a NanoSpeech basecalled read in FASTQ format:
+
+		@dc4a56dd-b899-49c4-9fc2-4bffcbe63463 2,6,9,13,14,17,20,34,37,38,40,41,43,54,58,61,65,66,68,70,74,75,77,78,82,84,85,89,92,104,105,113,118,121,122,129,134,137,138,153,156,158,162,170,172,174,180,187,191,196,199,201,204,205,207,213,218,222,231,239,241,245,246,250,252,253,254,256,264,270,271,272,273,275,277,281,284,289,301,302,303,307,309,313,316,317,322,327,330,331,333,340,343,345,348,357,361,363,364,366,367,372,373,376,385,389,391,392,394,395,400,402,403,404,409,413,417,424,425,431,442,445,446,447,453,455,461,463,466,467,471,472,479,485,486,491,497,502,504,508,511,512,517,522,525,526,528,535,538,540,543,552,556,558,559,561,562,567,569,570,571,576,580,584,591,594,595,596,602,604,610,612,615,616,620,621,632,641
+		ACAATTACCACCCAAATAACAAAACACCCACCCTACTAATAATACACAATATTAACCTACCACCAAACAAATTTAACAATCCATAAATCAACACATTATTCACTAAAACTATTAATCCACAAAACTATTAATCCACAAACACATCCTTTCTTTACTAAAATCACCCATTTACACATCTCCACTCACTATTTAATTCACCATAATAATAAAATAATCCAATATATTCCTTTCAAATAAACATACATAACATACAAAAATCTCTCAATATCAAAAACACAAACACTACAATAATTTTTCTATTAAAATTAAACTTAAAAACACCAATACACTAACATATACCAATACACAATATCAACAACTTACAACAATTACAACAATATCAACAACTTACAACAATTACACAAACACTAATTAATTACTATCCAAATATCACTAAAAACATAACAAACCATTATAATATTACACCAAATCAAAAAACCAATCCCAATCCTACATTTAAATTAAACTTAAAAACACCAATACACTAACATATACCAATACACAATATCAACAACTTACAACAATTACACAAACACTAATTAATTACTATCTAACAAACCATTATAATATTACACCAAATCAAAGCCTCATCCATTCCTACCAACCCTCCTA
+		+
+		#)*++,+++++++++++++++++++++++++++++++*+++++++++++++++++++++++++++++++++++++++++++++++++*+++++++++***++*')(#%&#'+**()+*++('$"%+(+,++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++,($"&+%+,++++++++++++++++++++++++++++++++++++++++++*+++++*++++++++++)*+++++*++++*++++++++++++++++*+++*+)*+**(*++*+(&)**++&*)(')+(*''&'%'+*+(+("$#%+*+++++++++++++++++++++++++++++++++++++++++***+++*)*++++*+++*))**+*)*+*)*+++++++(*+**+++*++*))+++++))+++)++(++'+++*+()+)*)"##(%#+++++++++++*+++++++++++++++++*++++++*++++++++*+*++++***++++++')++++(((*++)*+++++**+)&""#$(**+++++++++++++**++*$'*+())")('"##%"#$%%)*$%)(&#'#%##$$&
 
 3) Alignments of fasta/fastq files.
 

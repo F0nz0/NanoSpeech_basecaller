@@ -338,7 +338,7 @@ if __name__ == "__main__":
     parser.add_argument("-c",
                         "--clip_outliers",
                         required=False,
-                        default="30-175",
+                        default="20-185",
                         type=str,
                         help="--clip_outliers: \t a <str> indicating the min-max currents value to be clipped with mean. [30-175]")
     parser.add_argument("-u",
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     parser.add_argument("-cl",
                         "--chunks_len",
                         required=False,
-                        default=2800,
+                        default=3000,
                         type=int,
                         help="--chunks_len: \n <int> Chunks lenght the generator will be output from raw signals. [2800]")
     parser.add_argument("-idxs",
