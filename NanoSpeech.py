@@ -340,7 +340,7 @@ if __name__ == "__main__":
                         required=False,
                         default="20-185",
                         type=str,
-                        help="--clip_outliers: \t a <str> indicating the min-max currents value to be clipped with mean. [30-175]")
+                        help="--clip_outliers: \t a <str> indicating the min-max currents value to be clipped with mean. [20-185]")
     parser.add_argument("-u",
                         "--print_gpu_memory",
                         required=False,
@@ -373,7 +373,7 @@ if __name__ == "__main__":
                         required=False,
                         default=3000,
                         type=int,
-                        help="--chunks_len: \n <int> Chunks lenght the generator will be output from raw signals. [2800]")
+                        help="--chunks_len: \n <int> Chunks lenght the generator will be output from raw signals. [3000]")
     parser.add_argument("-idxs",
                         "--print_chunks_idxs",
                         required=False,
