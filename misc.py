@@ -156,6 +156,25 @@ def convert_ItoA(sequence):
             seq_conv += b
     return seq_conv, Is_idx
 
+# convert Modified nucleotide to Canonical version and save idexes
+def convert_MODtoCAN(sequence, mods_dict):
+    '''
+    A function which take in input a nucleotide sequence with Inosines and convert
+    the sequence in only giving back the indices of Inosines (modified Adenosines).
+    '''
+    seq_conv = ""
+    ModS_idxs = {}
+    # inizialize ModS_idxs
+    for k in mods_dict.keys():
+        ModS_idxs[k] = []
+    for i,b in enumerate(sequence):
+        if b in mods_dict.keys():
+            seq_conv += mods_dict[b]
+            ModS_idxs[b] += [i]
+        else:
+            seq_conv += b
+    return seq_conv, ModS_idxs
+
 def phred_score_to_symbol(phred_score):
     '''
     A function to convert the phred score to ascii symbol or vice versa.

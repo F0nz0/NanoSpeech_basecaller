@@ -294,8 +294,26 @@ class VectorizeChar:
     def get_vocabulary(self):
         return self.vocab
     
+class VectorizeCharMulti:
+    def __init__(self, max_len=50, vocab=["-","<", ">", "a", "c", "g", "t", "i"]):
+        self.vocab = (vocab)
+        self.max_len = max_len
+        self.char_to_idx = {}
+        for i, ch in enumerate(self.vocab):
+            self.char_to_idx[ch] = i
+
+    def __call__(self, text):
+        text = text.lower()
+        text = text[: self.max_len - 2]
+        text = "<" + text + ">"
+        pad_len = self.max_len - len(text)
+        return [self.char_to_idx.get(ch, 1) for ch in text] + [0] * pad_len
+
+    def get_vocabulary(self):
+        return self.vocab
+    
 # start model
-def initialize_model(m_idx, model_weigths):
+def initialize_model(m_idx, model_weigths, num_classes=8):
     vectorizer = VectorizeChar(250)
     # the model's architecture
     model = Transformer(
@@ -305,7 +323,7 @@ def initialize_model(m_idx, model_weigths):
         target_maxlen=250,
         num_layers_enc=4,
         num_layers_dec=2,
-        num_classes=8,
+        num_classes=num_classes,
     )
     model._name=f"NanoSpeech_{m_idx}"
 

@@ -1,3 +1,7 @@
 venv
 __pycache__
 basecaller.sh
+multi_mod_ver_DEVELOPMENT.ipynb
+test_DEVELOPMENT
+models/NanoSpeech_Inosine_m6A_m23M_9classes_e30*_d29M.h*
+.ipynb_checkpoints
