@@ -173,7 +173,7 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 		gBlock2	157.0	+	18	23	0.782608695652174
 		gBlock2	159.0	+	1	23	0.043478260869565216
 
-### **Single Modification version (Inosine-only)**
+### **Multi Modification version**
 Additionally, a more complex set of scripts is released in order to handle NanoSpeech models trained on multiple modifications. For every model in h5 format, a configuration file (models/*.h5.cfg) is coupled which contains parameters to initialize the transformer model. The main script is NanoSpeech_multi_mod.py and it accepts the following options:
 
 		python3 NanoSpeech_multi_mod.py \
