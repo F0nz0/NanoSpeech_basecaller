@@ -1,4 +1,0 @@
-to decompress models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.tar.gz_part_* use:
-
-cat models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.tar.gz_part_* > models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.tar.gz
-tar -xzvf models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.tar.gz
