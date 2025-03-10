@@ -4,4 +4,8 @@ basecaller.sh
 multi_mod_ver_DEVELOPMENT.ipynb
 test_DEVELOPMENT
 models/NanoSpeech_Inosine_m6A_m23M_9classes_e30*_d29M.h*
+models/*_DEVELOPMENT*
 .ipynb_checkpoints
+*_DEVELOPMENT*
+*_BACKUP_*
+*_DONOTUSE_*

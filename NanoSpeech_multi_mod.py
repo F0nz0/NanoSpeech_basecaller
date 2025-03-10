@@ -83,8 +83,10 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
                         currents_chunk_df = pd.Series(pA_data) # convert to pandas series
                         currents_chunk_df[(currents_chunk_df<clip_outliers[0])|(currents_chunk_df>clip_outliers[1])] = round(currents_chunk_df.mean(), 3) # clip outliers to the average values of the current chunk
                         pA_data = currents_chunk_df.values
+                        #print("PRODUCER MESSAGE DEVELOPMENT - pA_data type:", type(pA_data), flush=True)
                         ###!!! add logic for DNA basecalling here ###!!!
                         X = generate_chunks(pA_data[::-1], chunks_len=chunks_len)
+                        #print("PRODUCER MESSAGE DEVELOPMENT - X shape:", X.shape, flush=True)
                         q.put([read_name_id, fast5_fullpath, X])
                         reads_processed_counter += 1
                         # block producer if required
@@ -110,9 +112,15 @@ def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=N
     for t in range(threads_n):
         q.put(None)
 
-def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None, mods=None, vocab_string=None, max_len=None):
+def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None, mods=None, vocab_string=None, max_len=None, pad_len=971, 
+                    num_hid=250,
+                    num_head=10,
+                    num_feed_forward=450,
+                    num_layers_enc=4,
+                    num_layers_dec=2):
     import tensorflow as tf
     tf.get_logger().setLevel('ERROR')
+    tf.autograph.set_verbosity(0)
     # limit gpu usage per model
     # taken from --> https://stackoverflow.com/questions/55788883/limiting-gpu-memory-usage-by-keras-tf-2019
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -146,7 +154,12 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
     print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Output temporary file: {out_filepath_cons}", flush=True)
     # inizialize the model for the current consumer worker
     print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Initializing NanoSpeech transformer model...", flush=True)
-    model = initialize_model(id_consumer, model_weigths, num_classes=len(vocab_list))
+    model = initialize_model(id_consumer, model_weigths, num_classes=len(vocab_list), target_maxlen=max_len, pad_len=pad_len,
+                             num_hid=num_hid,
+                             num_head=num_head,
+                             num_feed_forward=num_feed_forward,
+                             num_layers_enc=num_layers_enc,
+                             num_layers_dec=num_layers_dec)
     #print(model.summary())
     output = open(out_filepath_cons, "w")
     print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Starting processing fast5 files...", flush=True)
@@ -158,10 +171,10 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
             read_name_id = prod_out[0]
             fast5_fullpath = prod_out[1]
             X = prod_out[2]
-            #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]", read_name_id, X.shape) ##########!!!!!!!
-            #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]", X) ##########!!!!!!!
+            #print(f"\n##################################\n[{datetime.now()}] [Consumer {id_consumer} Message]", read_name_id, X.shape, flush=True) ##########!!!!!!! DEVELOPMENT
+            #print(f"[{datetime.now()}] [Consumer {id_consumer} Message]", X, flush=True) ##########!!!!!!! DEVELOPMENT
             #ds = create_tf_dataset_basecaller(X, bs=512)
-            ds = tf.data.Dataset.from_generator(generator_consumer, args=[X], output_types=(tf.float32), output_shapes = ((971,126)), )
+            ds = tf.data.Dataset.from_generator(generator_consumer, args=[X, pad_len], output_types=(tf.float32), output_shapes = ((pad_len,126)), )
             ds = ds.batch(6)
             #print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message]\t", read_name_id, ds) ##########!!!!!!!
             if print_gpu_memory:
@@ -212,10 +225,12 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                     # generate prediction and convert to text version
                     try:
                         pred, prob = model.generate(i, 1, return_proba=True)
-                    except:
+                    except Exception as e:
                         print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Exception --> {e}", flush=True,file=sys.stderr)
                         continue
                     for p,p_ in zip(pred, prob): # p -> prediction, p_ -> probabilities
+                        #print("p:", p, flush=True) #### !!!! DEVELOPMENT
                         c+=1
                         prediction = ""
                         probabilities_err = []
@@ -311,6 +326,7 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
     configurations_fp = model_weigths+".cfg"
     print(f"[{datetime.now()}] [Main Process Message] Loading configuration file for selected model at: {configurations_fp}", flush=True)
     configurations = pd.read_csv(configurations_fp, index_col=0, header=None).iloc[:,0]
+    # print(configurations)
     if not chunks_len:
         chunks_len = int(configurations["chunks_len"])
         print(f"[{datetime.now()}] [Main Process Message] chunks_len: {chunks_len}", flush=True)
@@ -324,6 +340,15 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
     print(f"[{datetime.now()}] [Main Process Message] Modifications (mod_nucletide->canonical_nucleotide): {mods}", flush=True)
     vocab_string = configurations["vocab"]
     print(f"[{datetime.now()}] [Main Process Message] Vocabulary string: {vocab_string}", flush=True)
+    pad_len = int(configurations["pad_len"])
+    print(f"[{datetime.now()}] [Main Process Message] pad_len for input tensors: {pad_len}", flush=True)
+    
+    num_hid = int(configurations["num_hid"])
+    num_head = int(configurations["num_head"])
+    num_feed_forward = int(configurations["num_feed_forward"])
+    num_layers_enc = int(configurations["num_layers_enc"])
+    num_layers_dec = int(configurations["num_layers_dec"])
+
 
     start_global = datetime.now()
     q = Queue(maxsize=n_models*20)
@@ -332,7 +357,13 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
     for t in range(n_models):
         # q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None
         consumers.append( Process(target=consumer_worker, args=(q, t+1, model_weigths, out_folderpath, 
-                                                                extention, print_gpu_memory, print_chunks_idxs, mods, vocab_string, max_len)))
+                                                                extention, print_gpu_memory, print_chunks_idxs, mods, vocab_string, max_len, pad_len,
+                                                                num_hid,
+                                                                num_head,
+                                                                num_feed_forward,
+                                                                num_layers_enc,
+                                                                num_layers_dec))
+                                                                )
     print(f"[{datetime.now()}] [Main Process Message] Generating requested consumers. N° of Consumers: {len(consumers)}", flush=True)
     # start consumers
     for c in consumers:

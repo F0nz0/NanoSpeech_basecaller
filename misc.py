@@ -13,7 +13,7 @@ from math import ceil
 
 # some needed functions
 def generate_chunks(pA_data, chunks_len, shift=None):
-    length = len(pA_data)
+    length = pA_data.shape[0]
     if shift == None:
         shift=chunks_len
     n_chunks = ceil(length/chunks_len)
@@ -21,7 +21,7 @@ def generate_chunks(pA_data, chunks_len, shift=None):
     for n,w in enumerate(range(n_chunks)):
         chunk = pA_data[start:start+chunks_len]
         start = start+chunks_len
-        if len(chunk) == chunks_len:
+        if chunk.shape[0] == chunks_len:
             if n == 0:
                 X = chunk
             else:
@@ -29,17 +29,19 @@ def generate_chunks(pA_data, chunks_len, shift=None):
     return X
 
 
-def generator_consumer(X):
+def generator_consumer(X, pad_len = 971):
     for c,audio in enumerate(X):
         try:
-            audio_ds = pA_to_audio(audio)
-        except:
-            print(f"EXCEPTION during conversion of audio via FT at chunk n° {c+1}/{X.shape[0]}:", audio, len(audio), file=sys.stderr)
+            audio_ds = pA_to_audio(audio, pad_len)
+        except Exception as e:
+            print(f"[generator_consumer message] EXCEPTION during conversion of audio via FT at chunk n° {c+1}/{X.shape[0]} (it will be skipped):", len(audio), file=sys.stderr, flush=True)
+            print(f"[generator_consumer message] Exception --> {e}", file=sys.stderr, flush=True)
+            continue
         yield audio_ds
 
 
 
-def pA_to_audio(pA_chunk):
+def pA_to_audio(pA_chunk, pad_len = 971):
     # eliminate nan before stft operation
     pA_chunk = pA_chunk[~tf.math.is_nan(pA_chunk)]
     # spectrogram using stft starting from chunks of pA currents measurements
@@ -51,7 +53,7 @@ def pA_to_audio(pA_chunk):
     x = (x - means) / stddevs
     audio_len = tf.shape(x)[0]
     # padding to a fixed length
-    pad_len = 971
+    #pad_len = 971
     paddings = tf.constant([[0, pad_len], [0, 0]])
     x = tf.pad(x, paddings, "CONSTANT")[:pad_len, :]
     return x
@@ -96,7 +98,8 @@ def raw_to_pA(f5):
     '''
     try:
         raw_unit = f5.get_channel_info()["range"] / f5.get_channel_info()["digitisation"]
-        pA_signal = (f5.get_raw_data() + f5.get_channel_info()["offset"]) * raw_unit
+        offset = f5.get_channel_info()["offset"]
+        pA_signal = (f5.get_raw_data() + offset) * raw_unit
         return pA_signal
     except Exception as e:
         print("AN EXCEPTION HAS OCCURRED!\n", e, flush=True)

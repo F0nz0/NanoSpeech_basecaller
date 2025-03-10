@@ -1,11 +1,12 @@
 import tensorflow as tf
-tf.autograph.set_verbosity(2)
+tf.autograph.set_verbosity(0)
 from tensorflow import keras
 from tensorflow.keras import layers
 from joblib import load
 import os
-from misc import create_tf_dataset
+#from misc import create_tf_dataset
 from datetime import datetime
+import numpy as np
 
 ############
 # Code taken, adapted and modified from: 
@@ -49,7 +50,7 @@ class SpeechFeatureEmbedding(layers.Layer):
 
 # Transformer Encoder Layer
 class TransformerEncoder(layers.Layer):
-    def __init__(self, embed_dim, num_heads, feed_forward_dim, rate=0.1):
+    def __init__(self, embed_dim, num_heads, feed_forward_dim, rate=0.0):
         super().__init__()
         self.att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
         self.ffn = keras.Sequential(
@@ -74,7 +75,7 @@ class TransformerEncoder(layers.Layer):
 
 # Transformer Decoder Layer
 class TransformerDecoder(layers.Layer):
-    def __init__(self, embed_dim, num_heads, feed_forward_dim, dropout_rate=0.1):
+    def __init__(self, embed_dim, num_heads, feed_forward_dim, dropout_rate=0.0):
         super().__init__()
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -83,9 +84,9 @@ class TransformerDecoder(layers.Layer):
             num_heads=num_heads, key_dim=embed_dim
         )
         self.enc_att = layers.MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
-        self.self_dropout = layers.Dropout(0.5)
-        self.enc_dropout = layers.Dropout(0.1)
-        self.ffn_dropout = layers.Dropout(0.1)
+        self.self_dropout = layers.Dropout(0.0)
+        self.enc_dropout = layers.Dropout(0.0)
+        self.ffn_dropout = layers.Dropout(0.0)
         self.ffn = keras.Sequential(
             [
                 layers.Dense(feed_forward_dim, activation="relu"),
@@ -185,8 +186,8 @@ class Transformer(keras.Model):
 
     def train_step(self, batch):
         """Processes one batch inside model.fit()."""
-        source = batch["source"]
-        target = batch["target"]
+        source = batch[0]
+        target = batch[1]
         dec_input = target[:, :-1]
         dec_target = target[:, 1:]
         with tf.GradientTape() as tape:
@@ -201,8 +202,8 @@ class Transformer(keras.Model):
         return {"loss": self.loss_metric.result()}
 
     def test_step(self, batch):
-        source = batch["source"]
-        target = batch["target"]
+        source = batch[0]
+        target = batch[1]
         dec_input = target[:, :-1]
         dec_target = target[:, 1:]
         preds = self([source, dec_input])
@@ -214,6 +215,7 @@ class Transformer(keras.Model):
 
     def generate(self, source, target_start_token_idx, return_proba=False):
         """Performs inference over one batch of inputs using greedy decoding."""
+        #print("NANOSPEECH GENERATE METHOD DEVELOPMENT MESSAGE - self.target_maxlen:", self.target_maxlen, flush=True)
         bs = tf.shape(source)[0]
         enc = self.encoder(source)
         dec_input = tf.ones((bs, 1), dtype=tf.int32) * target_start_token_idx
@@ -311,18 +313,34 @@ class VectorizeCharMulti:
 
     def get_vocabulary(self):
         return self.vocab
-    
+
 # start model
-def initialize_model(m_idx, model_weigths, num_classes=8):
-    vectorizer = VectorizeChar(250)
+def initialize_model(m_idx, model_weigths, num_classes=8, target_maxlen=250, pad_len=971, 
+                     num_hid=250,
+                     num_head=10,
+                     num_feed_forward=450,
+                     num_layers_enc=4,
+                     num_layers_dec=2):
+    print("\nINITIALIZE MODEL INPUT ARGS:")     ### DEVELOPMENT ###
+    print("\t- m_idx:", m_idx)                  ### DEVELOPMENT ###
+    print("\t- model_weigths:", model_weigths)  ### DEVELOPMENT ###
+    print("\t- num_classes:", num_classes)      ### DEVELOPMENT ###
+    print("\t- target_maxlen:", target_maxlen)  ### DEVELOPMENT ###
+    print("\t- pad_len:", pad_len)              ### DEVELOPMENT ###
+    print("\t- num_hid:", num_hid)
+    print("\t- num_head:", num_head)
+    print("\t- num_feed_forward:", num_feed_forward)
+    print("\t- num_layers_enc:", num_layers_enc)
+    print("\t- num_layers_dec:", num_layers_dec)
+    # vectorizer = VectorizeChar(target_maxlen)
     # the model's architecture
     model = Transformer(
-        num_hid=250,
-        num_head=10,
-        num_feed_forward=450,
-        target_maxlen=250,
-        num_layers_enc=4,
-        num_layers_dec=2,
+        num_hid=num_hid,
+        num_head=num_head,
+        num_feed_forward=num_feed_forward,
+        target_maxlen=target_maxlen,
+        num_layers_enc=num_layers_enc,
+        num_layers_dec=num_layers_dec,
         num_classes=num_classes,
     )
     model._name=f"NanoSpeech_{m_idx}"
@@ -344,21 +362,15 @@ def initialize_model(m_idx, model_weigths, num_classes=8):
     optimizer = keras.optimizers.Adam(learning_rate)
     model.compile(optimizer=optimizer, loss=loss_fn)
 
-    # load and initialize pretrained model using a
-    # fake sample to initialize the input shapes
-    #print(f"[{datetime.now()}] Initializing the model...", flush=True)
-    b_in_x_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "batch_inizializer", "inizializer_batch_x.joblib")
-    b_in_y_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "batch_inizializer", "inizializer_batch_y.joblib")
-    #b_in_x_filepath = os.path.join("/lustrehome/afonzino/NanoSpeech", "batch_inizializer", "inizializer_batch_x.joblib")
-    #b_in_y_filepath = os.path.join("/lustrehome/afonzino/NanoSpeech", "batch_inizializer", "inizializer_batch_y.joblib")
-    batch_inizializer_x = load(b_in_x_filepath)
-    batch_inizializer_y = load(b_in_y_filepath)
-    ds_fake = create_tf_dataset(batch_inizializer_x.reshape(1,batch_inizializer_x.shape[1]), batch_inizializer_y, vectorizer, bs=1)
+    # load and initialize pretrained model using a fake sample to initialize the input shapes
+    print(f"[{datetime.now()}] Initializing the model...", flush=True)
+    X_fake = np.array([np.random.randint(-7,7,126*pad_len).astype(float).reshape(pad_len, 126) for i in range(10)])
+    y_fake = np.array([np.random.randint(0,6,target_maxlen,dtype="int32") for i in range(X_fake.shape[0])])    
     # first call of the model and loading
-    model.fit(ds_fake, validation_data=ds_fake, epochs=1, verbose=0)
-    #print(f"\n[{datetime.now()}] [Consumer {m_idx} Message] Model Summary:", flush=True)
-    #print(model.summary(expand_nested=True), flush=True)
-    #print("\n", flush=True)
+    model.fit(x=X_fake, y=y_fake, epochs=1, verbose=0)
+    print(f"\n[{datetime.now()}] [Consumer {m_idx} Message] Model Summary:", flush=True)
+    print(model.summary(), flush=True)
+    print("\n", flush=True)
     # load model weigths
     model.load_weights(model_weigths)
     return model
