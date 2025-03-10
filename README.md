@@ -244,7 +244,7 @@ Both per-read and aggregated predictions will contain an additional column with 
 ## **Additional Information**
 
 ### **Terms and Licence**:
-All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits or RNA004 and are demonstrative prototypes. The single modification model (R9: only inosine) was trained on a bigger dataset from differnt organisms and IVT constructs and, even if it possesses high generalization capacity, it is still a prototype. We are committed in developing production models for both R9 and RNA004 pores. The 2 modification model (R9: I + m6A) and the bigger 9 modification model (R9 see models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.cfg file) are prototypes trained only on syntehtic IVT data. A pilot model for pore RNA004 trained only on curlcakes in-vitro transcribed synthetic molecules is provided but generalization capacities are not ensured.
+All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits or RNA004 and are demonstrative prototypes. The single modification model (R9: only inosine) was trained on a bigger dataset from differnt organisms and IVT constructs and, even if it possesses high generalization capacity, it is still a prototype. We are committed to developing production models for both R9 and RNA004 pores. The 2 modification model (R9: I + m6A) and the bigger 9 modification model (R9 see models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.cfg file) are prototypes trained only on syntehtic IVT data. A pilot model for pore RNA004 trained only on curlcakes in-vitro transcribed synthetic molecules is provided but generalization capacities are not ensured.
 
 Research Purpose Only.
 
