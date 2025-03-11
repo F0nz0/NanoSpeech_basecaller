@@ -50,9 +50,9 @@ After the activation of the conda enviroment install the following softwares:
 	
 	    pip install wheel
 
-7) Install required Python packages using the requirements_latest_tf_2_7_0.txt file:
+7) Install required Python packages using the requirements.txt file:
 
-        python -m pip install -r requirements_latest_tf_2_7_0.txt
+        python -m pip install -r requirements.txt
 
 ## **Basic Usage**:
 ### **Single Modification version (Inosine-only)**
