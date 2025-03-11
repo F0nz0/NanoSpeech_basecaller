@@ -1,4 +1,4 @@
-To use this bigger prototype, model please download it from this shared link:
+To use this bigger prototype model, please download it from this shared link:
 https://drive.google.com/open?id=1FX68pY28C4OXRxrnOTX5bgz4EZiX8I-b&usp=drive_fs
 
 The configuration file is already present in this repository with the same root name at:
