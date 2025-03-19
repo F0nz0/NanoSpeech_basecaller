@@ -30,10 +30,10 @@ After the activation of the conda enviroment install the following softwares:
 		conda activate NanoSpeech
 
 		# install samtools
-		conda install -c bioconda samtools >= 1.3.1
+		conda install -c bioconda samtools==1.3.1
 
 		# install minimap2
-		conda install -c bioconda minimap2 == 2.24
+		conda install -c conda-forge minimap2==2.24
 
 		# create virtual environment inside Conda NanoSpeech env
 		python3 -m venv NanoSpeech_basecaller
