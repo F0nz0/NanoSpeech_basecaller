@@ -52,7 +52,7 @@ After the activation of the conda enviroment install the following softwares:
 
 7) Install required Python packages using the requirements.txt file:
 
-        python -m pip install -r requirements.txt
+        python -m pip install -r NanoSpeech_basecaller/requirements.txt
 
 ## **Basic Usage**:
 ### **Single Modification version (Inosine-only)**
