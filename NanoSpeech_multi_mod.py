@@ -392,7 +392,7 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=f"NanoSpeech basecaller.py v. {__version__}")
+    parser = argparse.ArgumentParser(description=f"NanoSpeech basecaller_multi_mod.py v. {__version__}")
     parser.add_argument("-d",
                         "--fast5_folderpath",
                         required=True,

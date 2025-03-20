@@ -9,3 +9,9 @@ models/*_DEVELOPMENT*
 *_DEVELOPMENT*
 *_BACKUP_*
 *_DONOTUSE_*
+bin
+share
+lib64
+include
+etc
+lib
