@@ -11,6 +11,13 @@ from datetime import datetime
 from ont_fast5_api.fast5_interface import get_fast5_file
 from math import ceil
 
+############
+# Code taken, adapted and modified from: 
+# https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py
+# Copyright 2020. The Keras authors and Apoorv Nandan
+# Released under Apache 2.0 License.
+#############
+
 # some needed functions
 def generate_chunks(pA_data, chunks_len, shift=None):
     length = pA_data.shape[0]
