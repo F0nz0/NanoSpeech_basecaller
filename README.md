@@ -246,6 +246,9 @@ Both per-read and aggregated predictions will contain an additional column with 
 ### **Terms and Licence**:
 All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits or RNA004 and are demonstrative prototypes. The single modification model (R9: only inosine) was trained on a bigger dataset from differnt organisms and IVT constructs and, even if it possesses high generalization capacity, it is still a prototype. We are committed to developing production models for both R9 and RNA004 pores. The 2 modification model (R9: I + m6A) and the bigger 9 modification model (R9 see models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.cfg file) are prototypes trained only on syntehtic IVT data. A pilot model for pore RNA004 trained only on curlcakes in-vitro transcribed synthetic molecules is provided but generalization capacities are not ensured.
 
+Credits:
+This library adapts and utilizes the model architecture and certain functionalities from an official example code on keras.io, [Transformer ASR Example] https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py which is released under the Apache 2.0 License.
+
 Research Purpose Only.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

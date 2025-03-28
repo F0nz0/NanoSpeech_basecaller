@@ -11,6 +11,8 @@ import numpy as np
 ############
 # Code taken, adapted and modified from: 
 # https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py
+# Copyright 2020. The Keras authors and Apoorv Nandan
+# Released under Apapche 2.0 License.
 #############
 
 ########## Transformer ###############
