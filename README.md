@@ -10,7 +10,7 @@
 A new Basecaller software for the single-step detection of modified bases during basecalling procedures of direct-RNA raw data. NanoSpeech is based on a Transformer model with expanded dictionaries with respect to canonical-nucleotides only (A,C,G,U,I=Inosine or other additional modifications). It provides also utilities for the mapping of these modified onto a reference genome or transcriptome, providing predictions on both a per-read and a genome-space level (aggregated data).
 
 ## **Required Softwares**:
-NanoSpeech uses internally (and not) some software that should be installed preferably into a new conda enviroment. \
+NanoSpeech has been tested on a CentOS-7 system with an NVIDIA A100-PCIE-40GB GPU (Compute Capability 8.0), CUDA 11.8, cuDNN 8.6 and TensorFlow v.2.7.0. This tool uses internally (and not) some software that should be installed preferably into a new conda enviroment. \
 After the activation of the conda enviroment install the following softwares:
 1) Python >= 3.7
 2) Samtools >= 1.3.1
