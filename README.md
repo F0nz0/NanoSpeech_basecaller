@@ -41,8 +41,8 @@ After the activation of the conda enviroment install the following softwares:
 		# remember to reset these environment variables to the new conda path to use GPUs (if you used conda to install cudatools and cuDNN libraries)
 		unset CUDA_HOME
 		unset LD_LIBRARY_PATH
-		export LD_LIBRARY_PATH=/path/to/conda/envs/NanoSpeech/lib:$LD_LIBRARY_PATH
-		export CUDA_HOME=/path/to/conda/envs/NanoSpeech
+		export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+		export CUDA_HOME=$CONDA_PREFIX
 
 		# install samtools
 		conda install -c bioconda samtools==1.3.1
