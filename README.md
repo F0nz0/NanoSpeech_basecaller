@@ -28,6 +28,21 @@ After the activation of the conda enviroment install the following softwares:
 
 		# activate the conda env
 		conda activate NanoSpeech
+		
+		# add required channels
+		conda config --add channels nvidia
+		conda config --add channels conda-forge
+		conda config --add channels bioconda
+		conda config --set channel_priority flexible
+
+		# install cudatools and cuDNN to speed up basecalling using GPUs (if you haven't already)
+		conda install cudatoolkit=11.8 cudnn=8.3.2 -c nvidia -y
+
+		# remember to reset these environment variables to the new conda path to use GPUs (if you used conda to install cudatools and cuDNN libraries)
+		unset CUDA_HOME
+		unset LD_LIBRARY_PATH
+		export LD_LIBRARY_PATH=/path/to/conda/envs/NanoSpeech/lib:$LD_LIBRARY_PATH
+		export CUDA_HOME=/path/to/conda/envs/NanoSpeech
 
 		# install samtools
 		conda install -c bioconda samtools==1.3.1
