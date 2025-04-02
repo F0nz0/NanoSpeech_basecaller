@@ -1,4 +1,5 @@
 venv
+NanoSpeech_basecaller
 __pycache__
 basecaller.sh
 multi_mod_ver_DEVELOPMENT.ipynb
