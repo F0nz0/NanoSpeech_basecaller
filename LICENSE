@@ -8,6 +8,8 @@ The code in these two files also contains original work and is used by other ori
 
 All other code in this repository is original work and licensed under the Apache License 2.0 License, unless otherwise stated.
 
+Gblocks data within the test_datasets directory were downloaded from Nguyen et al. (2022), Direct identification of A-to-I editing sites with nanopore native RNA sequencing, published in Nature Methods. Fast5 files were downloaded from the related BioProject PRJNA814100.
+
 -------------------------------------------------------------------------------
 
 Apache License
