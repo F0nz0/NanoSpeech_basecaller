@@ -264,6 +264,8 @@ All the provided models work only for the Nanopore libraries produced by ONT SQK
 Credits:
 This library adapts and utilizes the model architecture and certain functionalities from an official example code on keras.io, [Transformer ASR Example] https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py which is released under the Apache 2.0 License.
 
+For a detailed License explanation you must see the LICENSE section.
+
 Research Purpose Only.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
