@@ -1,33 +1,15 @@
-This project includes portions of third-party code from a keras.io example at https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py, originally authored by Apoorv Nandan, which are licensed under the Apache License, Version 2.0.
+This project includes portions of third-party code from a keras.io example at https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py, originally authored by Apoorv Nandan, which are licensed under the Apache License, Version 2.0. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
 The following files contain code derived and modified, where required, from the keras.io example and are subject to the Apache License 2.0:
 - misc.py
 - model.py
 
 The code in these two files also contains original work and is used by other original scripts for computations and serving of pretrained models.
+All other code in this repository is original work. For all the original code in this repository the following License/Statement have to be considered:
+##########
+This work is licensed under the Creative Commons Attribution - Non-Commercial 4.0 International License (CC BY-NC 4.0).
+For any commercial use or license request for market activities, interested parties are invited to contact the Technology Transfer Office (TTO) of the University of Bari Aldo Moro, copyright holder. For a copy of the license, please visit https://creativecommons.org/licenses/by-nc/4.0/
+##########
 
-All other code in this repository is original work and licensed under the Apache License 2.0 License, unless otherwise stated.
-
+Final Note:
 Gblocks data within the test_datasets directory were downloaded from Nguyen et al. (2022), Direct identification of A-to-I editing sites with nanopore native RNA sequencing, published in Nature Methods. Fast5 files were downloaded from the related BioProject PRJNA814100.
-
--------------------------------------------------------------------------------
-
-Apache License
-Version 2.0, January 2004
-http://www.apache.org/licenses/
-
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
--------------------------------------------------------------------------------
