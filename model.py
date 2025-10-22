@@ -323,17 +323,17 @@ def initialize_model(m_idx, model_weigths, num_classes=8, target_maxlen=250, pad
                      num_feed_forward=450,
                      num_layers_enc=4,
                      num_layers_dec=2):
-    print("\nINITIALIZE MODEL INPUT ARGS:")     ### DEVELOPMENT ###
-    print("\t- m_idx:", m_idx)                  ### DEVELOPMENT ###
-    print("\t- model_weigths:", model_weigths)  ### DEVELOPMENT ###
-    print("\t- num_classes:", num_classes)      ### DEVELOPMENT ###
-    print("\t- target_maxlen:", target_maxlen)  ### DEVELOPMENT ###
-    print("\t- pad_len:", pad_len)              ### DEVELOPMENT ###
-    print("\t- num_hid:", num_hid)
-    print("\t- num_head:", num_head)
-    print("\t- num_feed_forward:", num_feed_forward)
-    print("\t- num_layers_enc:", num_layers_enc)
-    print("\t- num_layers_dec:", num_layers_dec)
+    #print("\nINITIALIZE MODEL INPUT ARGS:")     ### DEVELOPMENT ###
+    #print("\t- m_idx:", m_idx)                  ### DEVELOPMENT ###
+    #print("\t- model_weigths:", model_weigths)  ### DEVELOPMENT ###
+    #print("\t- num_classes:", num_classes)      ### DEVELOPMENT ###
+    #print("\t- target_maxlen:", target_maxlen)  ### DEVELOPMENT ###
+    #print("\t- pad_len:", pad_len)              ### DEVELOPMENT ###
+    #print("\t- num_hid:", num_hid)
+    #print("\t- num_head:", num_head)
+    #print("\t- num_feed_forward:", num_feed_forward)
+    #print("\t- num_layers_enc:", num_layers_enc)
+    #print("\t- num_layers_dec:", num_layers_dec)
     # vectorizer = VectorizeChar(target_maxlen)
     # the model's architecture
     model = Transformer(
