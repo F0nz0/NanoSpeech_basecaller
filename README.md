@@ -229,7 +229,7 @@ Additionally, a more complex set of scripts has been released in order to handle
 	  -f FORMAT, --format FORMAT
 							--format: <string> indicating which type of raw data format has been passed among fast5 or pod5. [pod5]
  
- Here an example command to launch the basecalling of fast5 reads (pod5 reads have to be converted into fast5 files, see https://pod5-file-format.readthedocs.io/en/0.1.21/docs/tools.html#pod5-convert-fast5) using the NanoSpeech multi-mod version. The configurations will be automatically loaded from the corresponding *.h5.cfg file:
+ Here an example command to launch the basecalling of pod5/fast5 reads using the NanoSpeech multi-mod version. The configurations will be automatically loaded from the corresponding *.h5.cfg file:
 
 	python3 NanoSpeech_multi_mod.py \
 		-m {h5 model-path} \ ### please select a model coupled with a *.h5.cfg file ### for the multi-species inosine-only RNA002 model please use models/*NanoSpeech_Inosine_m23M_e71_d19Mrec.h5*
