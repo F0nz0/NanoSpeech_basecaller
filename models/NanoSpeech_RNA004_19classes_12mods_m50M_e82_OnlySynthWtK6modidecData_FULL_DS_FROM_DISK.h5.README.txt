@@ -11,5 +11,5 @@ pip install gdown
 2) move to the models directory:
 cd NanoSpeech_basecaller/models
 
-3) download the model using the its ID:
+3) download the model using its ID:
 gdown "https://drive.google.com/uc?id=1f3tgVloaxPvvjBPAF6FPWnLewETptHtA"

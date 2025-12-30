@@ -1,5 +1,5 @@
 # import basic modules
-import os, sys, pysam, shutil
+import os, sys, pysam, shutil, pod5
 from glob import iglob
 import tensorflow as tf
 from tensorflow import keras
@@ -18,106 +18,218 @@ import numpy as np
 from multiprocessing import Queue, Process, Value
 from math import ceil
 
-def producer(fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None, chunks_len=None):
-    print(f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5 files into input folder: {fast5_folderpath}", flush=True)
+
+def producer(raw_data_folderpath,
+             q,
+             threads_n,
+             clip_outliers,
+             n_reads_to_process=None,
+             print_read_name=None,
+             fast5list_filepath=None,
+             readslist_filepath=None,
+             chunks_len=None,
+             format="pod5"):
     print(f"\n[{datetime.now()}] [Producer Message] Outliers clipping limits: {clip_outliers}", flush=True)
     print(f"\n[{datetime.now()}] [Producer Message] Chunks length used by generator: {chunks_len}", flush=True)
-    total_fast5_detected = 0
-    fast5_processed = 0
-    reads_processed_counter = 0
-    # if fast5list file not provided scan the input folder/file
-    if not fast5list_filepath:
-        # if fast5_folderpath is not a file
-        if not os.path.isfile(fast5_folderpath):
-            # detect total number of fast5 files to be processed
-            for fast5_fullpath in iglob(fast5_folderpath + "/**/*fast5", recursive=True):    
-                if os.path.isfile(fast5_fullpath):
-                    total_fast5_detected += 1
-            print(f"\n[{datetime.now()}] [Producer Message] Total fast5 detected into input fast5 main folder: {total_fast5_detected}", flush=True)
-            fast5gen = iglob(fast5_folderpath + "/**/*fast5", recursive=True) 
-        else:
-            # in this case a single fast5 file has been provided as input
-            total_fast5_detected += 1
-            print(f"\n[{datetime.now()}] [Producer Message] Provided a fast5 file as input. Total fast5 to process: {total_fast5_detected}", flush=True)
-            fast5gen = [fast5_folderpath] # as single fast5 to basecall
-    else:
-        # limit basecalling to a given list of fast5 files
-        print(f"\n[{datetime.now()}] [Producer Message] Provided a list of fast5 files. Limiting basecalling to this list: {fast5list_filepath}", flush=True)
-        with open(fast5list_filepath, "r") as fast5list_file:
-            fast5list = []
-            for _l_ in fast5list_file:
-                fast5list.append(_l_.rstrip())
-        total_fast5_detected = len(fast5list)
-        print(f"\n[{datetime.now()}] [Producer Message] Total fast5 to be processed based on provided fast5 list: {total_fast5_detected}", flush=True)
-        fast5gen = fast5list
-
-    # if a list of of reads ids has been provided
+    ###############################################################################################
+    #### A producer to retrieve and pre-process raw data for consumers from fast5 or pod5 files ###
+    ###############################################################################################
+    # if a list of reads ids has been provided
     if readslist_filepath:
-        print(f"\n[{datetime.now()}] A list of reads to focus the basecalling on has been provided at: {readslist_filepath}", flush=True)
+        print(
+            f"\n[{datetime.now()}] A list of reads to focus the basecalling on has been provided at: {readslist_filepath}",
+            flush=True)
         # load reads list
         readslist = []
         with open(readslist_filepath, "r") as readslist_file:
             for _l_ in readslist_file:
                 readslist.append(_l_.rstrip())
         n_reads_to_process = len(readslist)
-        print(f"\n[{datetime.now()}] A total of {n_reads_to_process} reads have been detected into reads list file. Basecalling will be limited on these ids.", flush=True)
+        print(
+            f"\n[{datetime.now()}] A total of {n_reads_to_process} reads have been detected into reads list file. Basecalling will be limited on these ids.",
+            flush=True)
 
-    ### start iteration across fast5s into input fast5_folder ###
-    print(f"[{datetime.now()}] [Producer Message] Starting basecalling on reads into fast5 files...", flush=True) 
-    with tqdm(total=total_fast5_detected, file=sys.stdout, desc="Fast5s processed:") as pbar:
-        for fast5_fullpath in fast5gen:
-            if os.path.isfile(fast5_fullpath):
-                print(f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5 file: {fast5_fullpath}", flush=True)
-                fast5_processed += 1
-                with get_fast5_file(fast5_fullpath) as f5:
-                    for r in f5.get_reads():
-                        read_name_id = r.read_id
-                        if readslist_filepath:
-                            if not read_name_id in readslist:
-                                # no basecall for this read id! Go to next one...
-                                continue
-                        pA_data = raw_to_pA(r)
-                        if print_read_name:
-                            print(f"\n[{datetime.now()}] [Producer Message] Extracting electric signal for read: {read_name_id} from fast5: {fast5_fullpath}", flush=True)
-                        # clip pA_data for outlier with mean value
-                        currents_chunk_df = pd.Series(pA_data) # convert to pandas series
-                        currents_chunk_df[(currents_chunk_df<clip_outliers[0])|(currents_chunk_df>clip_outliers[1])] = round(currents_chunk_df.mean(), 3) # clip outliers to the average values of the current chunk
-                        pA_data = currents_chunk_df.values
-                        #print("PRODUCER MESSAGE DEVELOPMENT - pA_data type:", type(pA_data), flush=True)
-                        ###!!! add logic for DNA basecalling here ###!!!
-                        X = generate_chunks(pA_data[::-1], chunks_len=chunks_len)
-                        #print("PRODUCER MESSAGE DEVELOPMENT - X shape:", X.shape, flush=True)
-                        q.put([read_name_id, fast5_fullpath, X])
-                        reads_processed_counter += 1
-                        # block producer if required
-                        if n_reads_to_process:
-                            if reads_processed_counter / n_reads_to_process % 0.1 == 0:
-                                print(f"\n[{datetime.now()}] [Producer Message] Reads processed {reads_processed_counter}/{n_reads_to_process} ({round(100*(reads_processed_counter/n_reads_to_process),2)}).", flush=True)
-                            if reads_processed_counter == n_reads_to_process:
-                                print(f"\n[{datetime.now()}] [Producer Message] Reached requester amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.", flush=True)
-                                print(f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}", flush=True)
-                                print(f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}", flush=True)
-                                break
-                if n_reads_to_process:
-                    if reads_processed_counter / n_reads_to_process % 0.1 == 0:
-                        print(f"\n[{datetime.now()}] [Producer Message] Reads processed {reads_processed_counter}/{n_reads_to_process} ({round(100*(reads_processed_counter/n_reads_to_process),2)}).", flush=True)
-                    if reads_processed_counter == n_reads_to_process:
-                        print(f"\n[{datetime.now()}] [Producer Message] Reached requester amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.", flush=True)
-                        print(f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}", flush=True)
-                        print(f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}", flush=True)
-                        break
-                pbar.update(1)
+    if format == "fast5":
+        ##### fast5 branch #####
+        fast5_folderpath = raw_data_folderpath
+        print(
+            f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5(s) into input folder/file: {fast5_folderpath}",
+            flush=True)
+        total_fast5_detected = 0
+        fast5_processed = 0
+        reads_processed_counter = 0
+        # if fast5list file not provided scan the input folder/file
+        if not fast5list_filepath:
+            # if fast5_folderpath is not a file
+            if not os.path.isfile(fast5_folderpath):
+                # detect total number of fast5 files to be processed
+                for fast5_fullpath in iglob(fast5_folderpath + "/**/*fast5", recursive=True):
+                    if os.path.isfile(fast5_fullpath):
+                        total_fast5_detected += 1
+                print(
+                    f"\n[{datetime.now()}] [Producer Message] Total fast5 detected into input fast5 main folder: {total_fast5_detected}",
+                    flush=True)
+                fast5gen = iglob(fast5_folderpath + "/**/*fast5", recursive=True)
+            else:
+                # in this case a single fast5 file has been provided as input
+                total_fast5_detected += 1
+                print(
+                    f"\n[{datetime.now()}] [Producer Message] Provided a fast5 file as input. Total fast5 to process: {total_fast5_detected}",
+                    flush=True)
+                fast5gen = [fast5_folderpath]  # as single fast5 to basecall
+        else:
+            # limit basecalling to a given list of fast5 files
+            print(
+                f"\n[{datetime.now()}] [Producer Message] Provided a list of fast5 files. Limiting basecalling to this list: {fast5list_filepath}",
+                flush=True)
+            with open(fast5list_filepath, "r") as fast5list_file:
+                fast5list = []
+                for _l_ in fast5list_file:
+                    fast5list.append(_l_.rstrip())
+            total_fast5_detected = len(fast5list)
+            print(
+                f"\n[{datetime.now()}] [Producer Message] Total fast5 to be processed based on provided fast5 list: {total_fast5_detected}",
+                flush=True)
+            fast5gen = fast5list
+
+        ### start iteration across fast5s into input fast5_folder ###
+        print(f"[{datetime.now()}] [Producer Message] Starting basecalling on reads into fast5 files...", flush=True)
+        with tqdm(total=total_fast5_detected, file=sys.stdout, desc="Fast5s processed:") as pbar:
+            for fast5_fullpath in fast5gen:
+                if os.path.isfile(fast5_fullpath):
+                    print(
+                        f"\n[{datetime.now()}] [Producer Message] Performing basecalling on fast5 file: {fast5_fullpath}",
+                        flush=True)
+                    fast5_processed += 1
+                    with get_fast5_file(fast5_fullpath) as f5:
+                        for r in f5.get_reads():
+                            read_name_id = r.read_id
+                            if readslist_filepath:
+                                if not read_name_id in readslist:
+                                    # no basecall for this read id! Go to next one...
+                                    continue
+                            pA_data = raw_to_pA(r)
+                            if print_read_name:
+                                print(
+                                    f"\n[{datetime.now()}] [Producer Message] Extracting electric signal for read: {read_name_id} from fast5: {fast5_fullpath}",
+                                    flush=True)
+                            # clip pA_data for outlier with mean value
+                            currents_chunk_df = pd.Series(pA_data)  # convert to pandas series
+                            currents_chunk_df[(currents_chunk_df < clip_outliers[0]) | (
+                                        currents_chunk_df > clip_outliers[1])] = round(currents_chunk_df.mean(),
+                                                                                       3)  # clip outliers to the average values of the current chunk
+                            pA_data = currents_chunk_df.values
+                            # print("PRODUCER MESSAGE DEVELOPMENT - pA_data type:", type(pA_data), flush=True)
+                            ###!!! add logic for DNA basecalling here ###!!!
+                            X = generate_chunks(pA_data[::-1], chunks_len=chunks_len)
+                            # print("PRODUCER MESSAGE DEVELOPMENT - X shape:", X.shape, flush=True)
+                            q.put([read_name_id, fast5_fullpath, X])
+                            reads_processed_counter += 1
+                            # block producer if required
+                            if n_reads_to_process:
+                                if reads_processed_counter / n_reads_to_process % 0.1 == 0:
+                                    print(
+                                        f"\n[{datetime.now()}] [Producer Message] Reads processed {reads_processed_counter}/{n_reads_to_process} ({round(100 * (reads_processed_counter / n_reads_to_process), 2)}).",
+                                        flush=True)
+                                if reads_processed_counter == n_reads_to_process:
+                                    print(
+                                        f"\n[{datetime.now()}] [Producer Message] Reached requester amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.",
+                                        flush=True)
+                                    print(
+                                        f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}",
+                                        flush=True)
+                                    print(
+                                        f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}",
+                                        flush=True)
+                                    break
+                    if n_reads_to_process:
+                        if reads_processed_counter / n_reads_to_process % 0.1 == 0:
+                            print(f"\n[{datetime.now()}] [Producer Message] Reads processed {reads_processed_counter}/{n_reads_to_process} ({round(100 * (reads_processed_counter / n_reads_to_process), 2)}).", flush=True)
+                        if reads_processed_counter == n_reads_to_process:
+                            print(
+                                f"\n[{datetime.now()}] [Producer Message] Reached requester amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.",
+                                flush=True)
+                            print(
+                                f"\n[{datetime.now()}] [Producer Message] Total number of fast5 files processed: {fast5_processed}",
+                                flush=True)
+                            print(
+                                f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}",
+                                flush=True)
+                            break
+                    pbar.update(1)
+    elif format == "pod5":
+        ##### pod5 branch #####
+        pod5_folderpath = raw_data_folderpath
+        reads_processed_counter = 0
+        print(f"\n[{datetime.now()}] [Producer Message] Performing basecalling on pod5(s) into input folder/file: {pod5_folderpath}", flush=True)
+        with pod5.DatasetReader(pod5_folderpath, recursive=True) as dataset:
+            # Use DatasetReader within this context manager to free resources when done
+            reads_to_process = dataset.num_reads
+            print(f"\n[{datetime.now()}] [Producer Message] Total number of pod5 detected: {len(dataset.paths)}",
+                  flush=True)
+            print(f"\n[{datetime.now()}] [Producer Message] Total number of reads detected: {reads_to_process}",
+                  flush=True)
+            if readslist_filepath:
+                reads_to_process = len(readslist)
+                print(f"\n[{datetime.now()}] [Producer Message] Limiting basecalling procedures to the provided list of read-ids ({reads_to_process})", flush=True)
+            pbar_miniters = int(reads_to_process / 100)
+            if pbar_miniters < 1:
+                pbar_miniters = 1
+            ### start iteration across pod5 files ###
+            print(f"[{datetime.now()}] [Producer Message] Starting basecalling on reads into pod5 files...", flush=True)
+            with tqdm(total=reads_to_process, miniters=pbar_miniters, file=sys.stdout, desc="Reads processed:") as pbar:
+                for read in dataset:
+                    read_name_id = str(read.read_id)
+                    if readslist_filepath:
+                        if not read_name_id in readslist:
+                            # no basecall for this read id! Go to next one...
+                            continue
+                    pA_data = read.signal_pa
+                    if print_read_name:
+                        print(
+                            f"\n[{datetime.now()}] [Producer Message] Extracting electric signal for read: {read_name_id}",
+                            flush=True)
+                    # clip pA_data for outlier with mean value
+                    currents_chunk_df = pd.Series(pA_data)  # convert to pandas series
+                    currents_chunk_df[
+                        (currents_chunk_df < clip_outliers[0]) | (currents_chunk_df > clip_outliers[1])] = round(
+                        currents_chunk_df.mean(), 3)  # clip outliers to the average values of the current chunk
+                    pA_data = currents_chunk_df.values
+                    ###!!! add logic for DNA basecalling here ###!!!
+                    X = generate_chunks(pA_data[::-1], chunks_len=chunks_len)
+                    q.put([read_name_id, pod5_folderpath, X])
+                    reads_processed_counter += 1
+                    pbar.update(1)
+                    # block producer if required
+                    if n_reads_to_process:
+                        if reads_processed_counter == n_reads_to_process:
+                            print(f"\n[{datetime.now()}] [Producer Message] Reached requested amount of reads to be processed. Producer is stopping and will produce end-signals for consumers workers.", flush=True)
+                            print(f"\n[{datetime.now()}] [Producer Message] Total number of reads processed: {reads_processed_counter}", flush=True)
+                            break
+
     # append end signal for every consumer
     print(f"\n[{datetime.now()}] [Producer Message] Producing end pills for consumers/workers", flush=True)
     for t in range(threads_n):
         q.put(None)
 
-def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, print_gpu_memory=None, print_chunks_idxs=None, mods=None, vocab_string=None, max_len=None, pad_len=971, 
+def consumer_worker(q, id_consumer,
+                    model_weigths,
+                    out_folderpath,
+                    extention,
+                    print_gpu_memory=None,
+                    print_chunks_idxs=None,
+                    mods=None,
+                    vocab_string=None,
+                    max_len=None,
+                    pad_len=971,
                     num_hid=250,
                     num_head=10,
                     num_feed_forward=450,
                     num_layers_enc=4,
                     num_layers_dec=2):
+    ######################################################################################################################
+    #### A process to consume from a queue pre-processed raw data by the producer and perform ab-initio basecalling on ###
+    ######################################################################################################################
     import tensorflow as tf
     tf.get_logger().setLevel('ERROR')
     tf.autograph.set_verbosity(0)
@@ -148,11 +260,11 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
 
     # create a VectorizeChar instance
     vectorizer = VectorizeCharMulti(max_len=max_len, vocab=vocab_list)
-    # create sofmax node to scale output logits to probability distribution among the possible tokens/symbols
+    # create softmax node to scale output logits to probability distribution among the possible tokens/symbols
     softmax = tf.keras.layers.Softmax(axis=-1)
     out_filepath_cons = os.path.join(out_folderpath, f"tmp_cons_{id_consumer}.{extention}")
     print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Output temporary file: {out_filepath_cons}", flush=True)
-    # inizialize the model for the current consumer worker
+    # initialize the model for the current consumer worker
     print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Initializing NanoSpeech transformer model...", flush=True)
     model = initialize_model(id_consumer, model_weigths, num_classes=len(vocab_list), target_maxlen=max_len, pad_len=pad_len,
                              num_hid=num_hid,
@@ -162,14 +274,14 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                              num_layers_dec=num_layers_dec)
     #print(model.summary())
     output = open(out_filepath_cons, "w")
-    print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Starting processing fast5 files...", flush=True)
+    print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Starting processing raw data...", flush=True)
     while True:
         # fetch from queue populated by producer as a list: [read_name_id, fast5_fullpath, pA_data]
         # create ds from inverted pA signal (since we are working on direct-RNA seq data)
         prod_out = q.get()
         if prod_out != None:
             read_name_id = prod_out[0]
-            fast5_fullpath = prod_out[1]
+            fast5_fullpath = prod_out[1] # or pod5 directory
             X = prod_out[2]
             #print(f"\n##################################\n[{datetime.now()}] [Consumer {id_consumer} Message]", read_name_id, X.shape, flush=True) ##########!!!!!!! DEVELOPMENT
             #print(f"[{datetime.now()}] [Consumer {id_consumer} Message]", X, flush=True) ##########!!!!!!! DEVELOPMENT
@@ -196,7 +308,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                     try:
                         pred = model.generate(i, 1)
                     except:
-                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id}. SKIPPING BATCH...", flush=True, file=sys.stderr)
                         continue
                     
                     for p in pred:
@@ -226,7 +338,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                     try:
                         pred, prob = model.generate(i, 1, return_proba=True)
                     except Exception as e:
-                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id} from fast5: {fast5_fullpath}. SKIPPING BATCH...", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id}. SKIPPING BATCH...", flush=True, file=sys.stderr)
                         print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Exception --> {e}", flush=True,file=sys.stderr)
                         continue
                     for p,p_ in zip(pred, prob): # p -> prediction, p_ -> probabilities
@@ -299,7 +411,7 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
                     output.write(f"{phred_scores_seq}\n")
                     output.flush()
             else:
-                print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (empty basecalled read) on read: {read_name_id} from fast5: {fast5_fullpath}", file=sys.stderr, flush=True)
+                print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (empty basecalled read) on read: {read_name_id}", file=sys.stderr, flush=True)
         else:
             # Stopping the loop of the consumer if found a end-signal (None) in the Queue.
             print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Found end of Queue.", flush=True)
@@ -307,17 +419,18 @@ def consumer_worker(q, id_consumer, model_weigths, out_folderpath, extention, pr
             break
 
 
-def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = None, print_gpu_memory=False, 
+def basecaller(raw_data_folderpath, out_filepath, model_weigths, clip_outliers = None, print_gpu_memory=False,
                print_read_name = False, n_reads_to_process = None, n_models = 1, fast5list_filepath = None, 
-               readslist_filepath = None, chunks_len = None, print_chunks_idxs = None, max_len = None):
-    print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller (spectrogram from fast5)", flush=True)
+               readslist_filepath = None, chunks_len = None, print_chunks_idxs = None, max_len = None, format = "pod5"):
+    print(f"[{datetime.now()}] [Main Process Message] NanoSpeech modified basecaller (spectrogram from fast5/pod5)", flush=True)
     # detect extention of output file and if it has the right type
     extention = os.path.splitext(out_filepath)[1][1:].lower()
     out_folderpath = os.path.splitext(out_filepath)[0]
     if not extention in ["fasta", "fastq"]:
-        sys.exit(f"[{datetime.now()}] [Main Process Message] Ouput file extention not allowed ({extention}). It should be either fasta or fastq. Exiting...")
-    print(f"[{datetime.now()}] [Main Process Message] Extention detected: <.{extention}>", flush=True)
+        sys.exit(f"[{datetime.now()}] [Main Process Message] Output file extension not allowed ({extention}). It should be either fasta or fastq. Exiting...")
+    print(f"[{datetime.now()}] [Main Process Message] Extension detected: <.{extention}>", flush=True)
     print(f"[{datetime.now()}] [Main Process Message] Generating output folder where basecalled reads will be saved.", flush=True)
+    print(f"[{datetime.now()}] [Main Process Message] Expected file format for raw-data: {format}", flush=True)
     if os.path.exists(out_folderpath):
         shutil.rmtree(out_folderpath)
     os.mkdir(out_folderpath)
@@ -369,9 +482,9 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
     for c in consumers:
         c.start()
     # create a producer process
-    # fast5_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None, chunks_len=2800
-    p = Process(target=producer, args=(fast5_folderpath, q, n_models, clip_outliers, n_reads_to_process, 
-                                       print_read_name, fast5list_filepath, readslist_filepath, chunks_len))
+    # raw_data_folderpath, q, threads_n, clip_outliers, n_reads_to_process=None, print_read_name=None, fast5list_filepath=None, readslist_filepath=None, chunks_len=2800
+    p = Process(target=producer, args=(raw_data_folderpath, q, n_models, clip_outliers, n_reads_to_process,
+                                       print_read_name, fast5list_filepath, readslist_filepath, chunks_len, format))
     p.start()
     
     # join consumers
@@ -386,18 +499,17 @@ def basecaller(fast5_folderpath, out_filepath, model_weigths, clip_outliers = No
     os.system(f"rm -r {out_folderpath}")
     
     stop_global = datetime.now()
-    print(f"[{datetime.now()}] [Main Process Message] Computation finished. Global Elapsed time: {stop_global - start_global}", flush=True)
     print(f"[{datetime.now()}] [Main Process Message] EXITING...Queue final size is:", q.qsize(), flush=True)
-
+    print(f"[{datetime.now()}] [Main Process Message] Computation finished. Global Elapsed time: {stop_global - start_global}", flush=True)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=f"NanoSpeech basecaller_multi_mod.py v. {__version__}")
+    parser = argparse.ArgumentParser(description=f"NanoSpeech basecaller: NanoSpeech_multi_mod.py v. {__version__}")
     parser.add_argument("-d",
-                        "--fast5_folderpath",
+                        "--raw_data_folderpath",
                         required=True,
                         type=str,
-                        help="--fast5_folderpath: \t a <str> with the fullpath for the input fast5 folderpath.")
+                        help="--raw_data_folderpath: \t a <str> with the fullpath for the input pod5/fast5 folder(file)-path containing the raw data. This works in an iterative manner within the tree of a directory.")
     parser.add_argument("-o",
                         "--out_filepath",
                         required=True,
@@ -459,9 +571,15 @@ if __name__ == "__main__":
                         default=None,
                         type=str,
                         help="--print_chunks_idxs: \n <bool> Set to True to print 0-based index for the end of chunks in the + line in fastq output [None]")
+    parser.add_argument("-f",
+                        "--format",
+                        required=False,
+                        default="pod5",
+                        type=str,
+                        help="--format: \n <string> indicating which type of raw data format has been passed among fast5 or pod5. [pod5]")
 
     args = parser.parse_args()
-    fast5_folderpath = args.fast5_folderpath
+    raw_data_folderpath = args.raw_data_folderpath
     out_filepath = args.out_filepath
     model_weigths = args.model_weigths
     n_models = args.threads_n
@@ -506,15 +624,16 @@ if __name__ == "__main__":
             print_chunks_idxs = True
         elif print_chunks_idxs == "False":
             print_chunks_idxs = False
+    format = args.format
 
     # print some starting info related to version, used program and to the input arguments
     print(f"[{datetime.now()}] NanoSpeech_basecaller version: {__version__}", flush=True)
-    print(f"[{datetime.now()}] NanoSpeech.py Input arguments:", flush=True)
+    print(f"[{datetime.now()}] NanoSpeech_multi_mod.py Input arguments:", flush=True)
     for argument in args.__dict__.keys():
         print(f"\t- {argument} --> {args.__dict__[argument]}", flush=True)
 
     # launch main function
-    basecaller(fast5_folderpath = fast5_folderpath, 
+    basecaller(raw_data_folderpath = raw_data_folderpath,
                out_filepath = out_filepath, 
                model_weigths = model_weigths, 
                clip_outliers = clip_outliers, 
@@ -525,4 +644,5 @@ if __name__ == "__main__":
                fast5list_filepath = fast5list_filepath, 
                readslist_filepath = readslist_filepath,
                chunks_len = chunks_len,
-               print_chunks_idxs=print_chunks_idxs)
+               print_chunks_idxs=print_chunks_idxs,
+               format=format)

@@ -365,14 +365,12 @@ def initialize_model(m_idx, model_weigths, num_classes=8, target_maxlen=250, pad
     model.compile(optimizer=optimizer, loss=loss_fn)
 
     # load and initialize pretrained model using a fake sample to initialize the input shapes
-    print(f"[{datetime.now()}] Initializing the model...", flush=True)
+    print(f"[{datetime.now()}] [Consumer {m_idx} Message] Initializing the model...", flush=True)
     X_fake = np.array([np.random.randint(-7,7,126*pad_len).astype(float).reshape(pad_len, 126) for i in range(10)])
     y_fake = np.array([np.random.randint(0,6,target_maxlen,dtype="int32") for i in range(X_fake.shape[0])])    
     # first call of the model and loading
     model.fit(x=X_fake, y=y_fake, epochs=1, verbose=0)
-    print(f"\n[{datetime.now()}] [Consumer {m_idx} Message] Model Summary:", flush=True)
-    print(model.summary(), flush=True)
-    print("\n", flush=True)
+    print(f"\n[{datetime.now()}] [Consumer {m_idx} Message] Model Summary:\n{model.summary()}", flush=True)
     # load model weigths
     model.load_weights(model_weigths)
     return model
