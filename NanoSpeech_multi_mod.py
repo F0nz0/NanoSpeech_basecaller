@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 from datetime import datetime
 from joblib import load
 from model import Transformer, CustomSchedule, VectorizeCharMulti, initialize_model
-from misc import generator, convert_MODtoCAN, raw_to_pA, phred_score_to_symbol, create_tf_dataset, create_tf_dataset_basecaller, generate_chunks, generator_consumer
+from misc import convert_MODtoCAN, raw_to_pA, phred_score_to_symbol, generate_chunks, generator_consumer
 from __init__ import __version__
 import argparse
 from tqdm import tqdm

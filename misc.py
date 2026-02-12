@@ -19,7 +19,7 @@ from math import ceil
 #############
 
 # some needed functions
-def generate_chunks(pA_data, chunks_len, shift=None):
+'''def generate_chunks(pA_data, chunks_len, shift=None):
     length = pA_data.shape[0]
     if shift == None:
         shift=chunks_len
@@ -33,6 +33,27 @@ def generate_chunks(pA_data, chunks_len, shift=None):
                 X = chunk
             else:
                 X = np.vstack((X,chunk))
+    return X'''
+
+def generate_chunks(pA_data, chunks_len, shift=0):
+    # important: the input pA_data signals has to be at least long as the requested chunks_len
+    # this should be handled outside the generator!
+    length = pA_data.shape[0]
+    if shift == 0:
+        shift = chunks_len
+    n_chunks = ceil(((length-chunks_len)/ shift)+1)
+    start = 0
+    for n,w in enumerate(range(n_chunks)):
+        chunk = pA_data[start:start+chunks_len]
+        start = start+shift
+        if chunk.shape[0] == chunks_len:
+            if n == 0: # starting chunck
+                X = chunk
+            else:
+                X = np.vstack((X,chunk))
+        # IF NEEDED ADD CODE HERE TO RETRIEVE LAST PARTIAL PORTION OF SIGNAL...POTENTIALLY USEFUL FOR SHORT MOLECULES
+    if len(X.shape) == 1: # in case of a single chunk
+        X = np.vstack([X])
     return X
 
 
