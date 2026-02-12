@@ -1,4 +1,4 @@
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __description__ = "A third-party modification aware basecaller for dRNA Nanopore data"
 
