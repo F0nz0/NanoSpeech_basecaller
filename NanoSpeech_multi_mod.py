@@ -341,40 +341,47 @@ def consumer_worker(q, id_consumer,
                         print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during inference on batch of read: {read_name_id}. SKIPPING BATCH...", flush=True, file=sys.stderr)
                         print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Exception --> {e}", flush=True,file=sys.stderr)
                         continue
-                    for p,p_ in zip(pred, prob): # p -> prediction, p_ -> probabilities
-                        #print("p:", p, flush=True) #### !!!! DEVELOPMENT
-                        c+=1
-                        prediction = ""
-                        probabilities_err = []
-                        phred_scores = ""
-                        for i__, idx in enumerate(p):
-                            prediction += idx_to_char[idx]
-                            #if idx == 8 or idx == 7:
-                            #    print("############### ", idx, idx_to_char[idx], "on read:", read_name_id, flush=True)
-                            # extract probability of error (as 1 - basecalled base proba scaled with softmax func.)
-                            # to note: here it will start from second entry intro p because proba doesn't have start symbol
-                            if i__ > 0:
-                                prob_err = 1-softmax(p_[i__-1])[idx] # 1 - probability of called base/symbol/token
-                                phred_score = int(-10 * math.log10( float(prob_err) ))
-                                probabilities_err.append(round(phred_score))
-                                phred_scores += phred_score_to_symbol(phred_score)
-                            if idx == target_end_token_idx:
-                                break
-                        # asses if start and ends with start-stop symbols
-                        if prediction.startswith("<") and prediction.endswith(">"):
-                            # asses if predicted bases are inside a list of allowed nucleotides
-                            if set( [i in vectorizer.vocab[3:] for i in set(prediction[1:-1])] ) == {True}:
-                                PREDS.append(prediction[1:-1])
-                                PROBS.append(phred_scores[:-1]) # lack of ">" start symbol
-                                last_end_of_chunk += len(prediction[1:-1])
-                                ENDS_OF_CHUNKS.append(last_end_of_chunk)
+                    try:
+                        for p,p_ in zip(pred, prob): # p -> prediction, p_ -> probabilities
+                            #print("p:", p, flush=True) #### !!!! DEVELOPMENT
+                            c+=1
+                            prediction = ""
+                            probabilities_err = []
+                            phred_scores = ""
+                            for i__, idx in enumerate(p):
+                                prediction += idx_to_char[idx]
+                                #if idx == 8 or idx == 7:
+                                #    print("############### ", idx, idx_to_char[idx], "on read:", read_name_id, flush=True)
+                                # extract probability of error (as 1 - basecalled base proba scaled with softmax func.)
+                                # to note: here it will start from second entry intro p because proba doesn't have start symbol
+                                if i__ > 0:
+                                    prob_err = 1-softmax(p_[i__-1])[idx] # 1 - probability of called base/symbol/token
+                                    phred_score = int(-10 * math.log10( float(prob_err) ))
+                                    probabilities_err.append(round(phred_score))
+                                    phred_scores += phred_score_to_symbol(phred_score)
+                                if idx == target_end_token_idx:
+                                    break
+                            # asses if start and ends with start-stop symbols
+                            if prediction.startswith("<") and prediction.endswith(">"):
+                                # asses if predicted bases are inside a list of allowed nucleotides
+                                if set( [i in vectorizer.vocab[3:] for i in set(prediction[1:-1])] ) == {True}:
+                                    PREDS.append(prediction[1:-1])
+                                    PROBS.append(phred_scores[:-1]) # lack of ">" start symbol
+                                    last_end_of_chunk += len(prediction[1:-1])
+                                    ENDS_OF_CHUNKS.append(last_end_of_chunk)
+                                else:
+                                    #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                                    ENDS_OF_CHUNKS.append(-2)
                             else:
-                                #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (UNPREDICTED_BASEs_BETWEEN_START_AND_STOP_TOKENS) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                                ENDS_OF_CHUNKS.append(-2)
-                        else:
-                            #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
-                            ENDS_OF_CHUNKS.append(-1)
-                            
+                                #print(f"[{datetime.now()}] [Consumer {id_consumer} Message] Error (NO_START_OR_STOP) for chunk n° {c} on read: {read_name_id} fast5: {fast5_fullpath}.", file=sys.stderr, flush=True)
+                                ENDS_OF_CHUNKS.append(-1)
+                    except Exception as e:
+                        print(f"\n\n\n[{datetime.now()}] [Consumer {id_consumer} Message] Error! Problem during generation of whole read and its pseudo-phred scores: {read_name_id}. SKIPPING DS BATCH...", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] Exception --> {e}", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] PREDs:\n{pred}", flush=True, file=sys.stderr)
+                        print(f"\n[{datetime.now()}] [Consumer {id_consumer} Message] PROBs:\n{prob}", flush=True, file=sys.stderr)
+                        continue
+
             # join to create the final merged output read (in fasta or fastq format as request with the output filename extention)
             # assess if NO_START_OR_STOP
             pred_seq = "".join(PREDS).upper()
