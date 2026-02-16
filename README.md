@@ -71,6 +71,7 @@ After the activation of the conda enviroment install the following softwares:
 
 ## **Basic Usage**:
 ### **Single Modification version (Inosine-only)**
+#### NOTE: This version will be deprecated and discontinued in future releases. Please prefer the multi-mod version described below with additional functionalities.
 The NanoSpeech basecaller is easy to use and need to be feed with a directory containing the fast5 to be basecalled and converted into fasta/fastq files. 
 (To note: this script will be deprecated in future releases, please prefer multi-modification version which can also manage pod5 format)
 
