@@ -243,15 +243,25 @@ def modification_detector(bam_filepath, fastx_filepath):
 
 
 # aggregate to genome space
-def aggregate_genome_space(per_read_preds_filepath, bam_filepath, save_to_tsv=False, min_qual=None):
+def aggregate_genome_space(per_read_preds_filepath, bam_filepath, save_to_tsv=False,
+                           min_qual=None, min_mods=None):
     # load per read table
     df = pd.read_table(per_read_preds_filepath, header=None, names=["region", "start", "stop", "read_name", "qual", "strand", "mod_base", "ref_base"])
     # filter by quality if requested
     if min_qual:
         df = df.query(f"qual >= {min_qual}")
     # aggregate to genome space counting modifications
-    df_genome_space = df.groupby(["region", "start", "strand", "mod_base"]).size().to_frame(name="MOD_count").reset_index()
+    df_genome_space = df.groupby(["region", "start", "strand", "mod_base"]).agg(min_quality=("qual", "min"),
+                                                                                median_quality=("qual", "median"),
+                                                                                mean_quality=("qual", "mean"),
+                                                                                max_quality=("qual", "max"),
+                                                                                std_quality=("qual", "std"),
+                                                                                MOD_count=("mod_base", "size")).reset_index()
     del(df)
+    if min_mods:
+        # retain only sites with at least <min_mods> count after genome-space aggregation
+        df_genome_space = df_genome_space.query(f"MOD_count >= {min_mods}").copy()
+        df_genome_space.reset_index(inplace=True, drop=True)
     # detect stranded depth
     with pysam.AlignmentFile(bam_filepath) as bam:
         depths = []
@@ -274,7 +284,7 @@ def aggregate_genome_space(per_read_preds_filepath, bam_filepath, save_to_tsv=Fa
 
 
 # main function
-def modifications_detector_main(bam_filepath, fastx_filepath, min_qual=None):
+def modifications_detector_main(bam_filepath, fastx_filepath, min_qual=None, aggregate=True, min_mods=None):
     '''
     Function to extract modifications positions on both read and genome-space dimensions.
     It is possible to use a minimum quality score for the called modifications when aggregating onto the
@@ -310,13 +320,15 @@ def modifications_detector_main(bam_filepath, fastx_filepath, min_qual=None):
     per_read_preds_filepath = bam_filepath + ".per_read.bed"
     print(f"[{datetime.now()}] Per-read prediction saved to file: {per_read_preds_filepath}", flush=True)
 
-    print(f"[{datetime.now()}] Aggregating to genome space modifications predictions.")
-    # aggregate onto genome-space using the required quality threshold (if provided)
-    aggregate_genome_space(per_read_preds_filepath=per_read_preds_filepath, 
-                           bam_filepath=bam_filepath, 
-                           save_to_tsv=True, 
-                           min_qual=min_qual)
-    print(f"[{datetime.now()}] Genome-space aggregated tsv file saved to: {bam_filepath}.genome_space.tsv")
+    if aggregate:
+        print(f"[{datetime.now()}] Aggregating to genome space modifications predictions.")
+        # aggregate onto genome-space using the required quality threshold (if provided)
+        aggregate_genome_space(per_read_preds_filepath=per_read_preds_filepath,
+                               bam_filepath=bam_filepath,
+                               save_to_tsv=True,
+                               min_qual=min_qual,
+                               min_mods=min_mods)
+        print(f"[{datetime.now()}] Genome-space aggregated tsv file saved to: {bam_filepath}.genome_space.tsv")
 
 
 if __name__ == "__main__":
@@ -342,11 +354,27 @@ if __name__ == "__main__":
                         default=None,
                         type=int,
                         help="--min_qual: \t a <int> used as minimum quality to filter modified basecalled bases/nucleotides during genome space aggregation step. [None]")
+    parser.add_argument("--aggregate",
+                        action="store_true",
+                        help="Enable aggregation of per-read predictions onto genome space. [default]")
+    parser.add_argument("--no-aggregate",
+                        dest="aggregate",
+                        action="store_false",
+                        help="Disable aggregation and keep only per-read predictions.")
+    parser.set_defaults(aggregate=True)
+    parser.add_argument("-c",
+                        "--min_mod_count",
+                        required=False,
+                        default=None,
+                        type=int,
+                        help="--min_mod_count: \t a <int> used as minimum modification count after genome-space aggregation to maintain a candidate site and compute depth and modification frequency. To note: it will be used only if aggregation step is activated [None]")
 
     args = parser.parse_args()
     bam_filepath = args.bam_filepath
     fastx_filepath = args.fastx_filepath
     min_qual = args.min_qual
+    aggregate = args.aggregate
+    min_mod_count=args.min_mod_count
     
     # print some starting info related to version, used program and to the input arguments
     print(f"[{datetime.now()}] NanoSpeech_basecaller version: {__version__}", flush=True)
@@ -357,4 +385,6 @@ if __name__ == "__main__":
     # launch main function
     modifications_detector_main(bam_filepath=bam_filepath,
                                 fastx_filepath=fastx_filepath,
-                                min_qual=min_qual)
+                                min_qual=min_qual,
+                                aggregate=aggregate,
+                                min_mods=min_mod_count)
