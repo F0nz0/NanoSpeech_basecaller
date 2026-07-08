@@ -10,11 +10,11 @@
 A new Basecaller software for the single-step detection of modified bases during basecalling procedures of direct-RNA raw data. NanoSpeech is based on a Transformer model with expanded dictionaries with respect to canonical-nucleotides only (A,C,G,U,I=Inosine or other additional modifications). It provides also utilities for the mapping of these modified onto a reference genome or transcriptome, providing predictions on both a per-read and a genome-space level (aggregated data).
 
 ## **Required Softwares**:
-NanoSpeech has been tested on a CentOS-7 system with an NVIDIA A100-PCIE-40GB GPU (Compute Capability 8.0), CUDA 11.8, cuDNN 8.6 and TensorFlow v.2.7.0. This tool uses internally (and not) some software that should be installed preferably into a new conda enviroment. \
-After the activation of the conda enviroment install the following softwares:
+NanoSpeech has been tested on a CentOS-7 system with an NVIDIA A100-PCIE-40GB GPU (Compute Capability 8.0), CUDA 11.8, cuDNN 8.6 and TensorFlow v.2.7.0. This tool uses internally (and not) some software that should be installed preferably into a new conda environment. \
+After the activation of the conda environment install the following software:
 1) Python >= 3.7
 2) Samtools >= 1.3.1
-3) Minimap2 == 2.24
+3) Minimap2 >= 2.24
 
 ## **Installation**:
 1) Download the source code from GitHub repository at the url https://github.com/F0nz0/NanoSpeech_basecaller:
@@ -51,11 +51,11 @@ After the activation of the conda enviroment install the following softwares:
 		conda install -c conda-forge minimap2==2.24
 
 		# create virtual environment inside Conda NanoSpeech env
-		python3 -m venv NanoSpeech_basecaller
+		python3 -m venv NanoSpeech_basecaller/NanoSpeech_basecaller_venv
 
 4) Activate the venv:
 	
-	    source NanoSpeech_basecaller/bin/activate
+	    source NanoSpeech_basecaller/NanoSpeech_basecaller_venv/bin/activate
 
 5) Upgrade pip version:
 	
@@ -67,7 +67,8 @@ After the activation of the conda enviroment install the following softwares:
 
 7) Install required Python packages using the requirements.txt file:
 
-        python -m pip install -r NanoSpeech_basecaller/requirements.txt
+		pip install "numpy==1.21.4" "Cython==3.0.8"
+		pip install --no-build-isolation --no-cache-dir -r NanoSpeech_basecaller/requirements.txt --timeout 100 -v
 
 ## **Basic Usage**:
 ### **Single Modification version (Inosine-only)**
@@ -79,58 +80,46 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 
 	Print the help message to visualize all the available options:
 		
-		python NanoSpeech.py -h
-
-		usage: NanoSpeech.py [-h] -d FAST5_FOLDERPATH -o OUT_FILEPATH -m MODEL_WEIGTHS [-t THREADS_N]
-                     [-c CLIP_OUTLIERS] [-u PRINT_GPU_MEMORY] [-r PRINT_READ_NAME] [-nr N_READS_TO_PROCESS]
-                     [-fl FAST5LIST_FILEPATH] [-rl READSLIST_FILEPATH] [-cl CHUNKS_LEN]
-                     [-idxs PRINT_CHUNKS_IDXS]
-
-		NanoSpeech basecaller.py v. 0.0.2
-
-		optional arguments:
-		-h, --help            show this help message and exit
-		-d FAST5_FOLDERPATH, --fast5_folderpath FAST5_FOLDERPATH
-								--fast5_folderpath: a <str> with the fullpath for the input fast5 folderpath.
-		-o OUT_FILEPATH, --out_filepath OUT_FILEPATH
-								--out_filepath: a <str> with the fullpath for the output fasta/fastq file generated
-								during the basecalling.
-		-m MODEL_WEIGTHS, --model_weigths MODEL_WEIGTHS
-								--model_weigths: a <str> with the fullpaht for the h5 file containing the weights to
-								inizialize pretrained transformer model.
-		-t THREADS_N, --threads_n THREADS_N
-								--threads_n: a <int> indicating the number of basecaller workers.
-		-c CLIP_OUTLIERS, --clip_outliers CLIP_OUTLIERS
-								--clip_outliers: a <str> indicating the min-max currents value to be clipped with
-								mean. [30-175]
-		-u PRINT_GPU_MEMORY, --print_gpu_memory PRINT_GPU_MEMORY
-								--print_gpu_memory: <str> Set to True to print gpu usage for every worker starting a
-								new read (experimental). [False]
-		-r PRINT_READ_NAME, --print_read_name PRINT_READ_NAME
-								--print_read_name: <bool> Set to True to let producer to print reads names added to
-								queue. [False]
-		-nr N_READS_TO_PROCESS, --n_reads_to_process N_READS_TO_PROCESS
-								--n_reads_to_process: <int> Numer of reads to limit basecalling. [None]
-		-fl FAST5LIST_FILEPATH, --fast5list_filepath FAST5LIST_FILEPATH
-								--fast5list_filepath: <str> Fullpath for a file with list of paths to fast5 files to
-								limit basecalling on. [None]
-		-rl READSLIST_FILEPATH, --readslist_filepath READSLIST_FILEPATH
-								--readslist_filepath: <str> Fullpath for a file with list of reads ids to limit
-								basecalling on. [None]
-		-cl CHUNKS_LEN, --chunks_len CHUNKS_LEN
-								--chunks_len: <int> Chunks lenght the generator will be output from raw signals.
-								[2800]
-		-idxs PRINT_CHUNKS_IDXS, --print_chunks_idxs PRINT_CHUNKS_IDXS
-								--print_chunks_idxs: <bool> Set to True to print 0-based index for the end of chunks
-								in the + line in fastq output [None]
+		python3 NanoSpeech.py -h
+			usage: NanoSpeech.py [-h] -d FAST5_FOLDERPATH -o OUT_FILEPATH -m MODEL_WEIGTHS [-t THREADS_N] [-c CLIP_OUTLIERS] [-u PRINT_GPU_MEMORY] [-r PRINT_READ_NAME]
+								 [-nr N_READS_TO_PROCESS] [-fl FAST5LIST_FILEPATH] [-rl READSLIST_FILEPATH] [-cl CHUNKS_LEN] [-idxs PRINT_CHUNKS_IDXS]
+			
+			NanoSpeech basecaller.py v. 0.2.1
+			
+			optional arguments:
+			  -h, --help            show this help message and exit
+			  -d FAST5_FOLDERPATH, --fast5_folderpath FAST5_FOLDERPATH
+									--fast5_folderpath: a <str> with the fullpath for the input fast5 folderpath.
+			  -o OUT_FILEPATH, --out_filepath OUT_FILEPATH
+									--out_filepath: a <str> with the fullpath for the output fasta/fastq file generated during the basecalling.
+			  -m MODEL_WEIGTHS, --model_weigths MODEL_WEIGTHS
+									--model_weigths: a <str> with the fullpaht for the h5 file containing the weights to inizialize pretrained transformer model.
+			  -t THREADS_N, --threads_n THREADS_N
+									--threads_n: a <int> indicating the number of basecaller workers.
+			  -c CLIP_OUTLIERS, --clip_outliers CLIP_OUTLIERS
+									--clip_outliers: a <str> indicating the min-max currents value to be clipped with mean. [20-185]
+			  -u PRINT_GPU_MEMORY, --print_gpu_memory PRINT_GPU_MEMORY
+									--print_gpu_memory: <str> Set to True to print gpu usage for every worker starting a new read (experimental). [False]
+			  -r PRINT_READ_NAME, --print_read_name PRINT_READ_NAME
+									--print_read_name: <bool> Set to True to let producer to print reads names added to queue. [False]
+			  -nr N_READS_TO_PROCESS, --n_reads_to_process N_READS_TO_PROCESS
+									--n_reads_to_process: <int> Numer of reads to limit basecalling. [None]
+			  -fl FAST5LIST_FILEPATH, --fast5list_filepath FAST5LIST_FILEPATH
+									--fast5list_filepath: <str> Fullpath for a file with list of paths to fast5 files to limit basecalling on. [None]
+			  -rl READSLIST_FILEPATH, --readslist_filepath READSLIST_FILEPATH
+									--readslist_filepath: <str> Fullpath for a file with list of reads ids to limit basecalling on. [None]
+			  -cl CHUNKS_LEN, --chunks_len CHUNKS_LEN
+									--chunks_len: <int> Chunks lenght the generator will be output from raw signals. [3000]
+			  -idxs PRINT_CHUNKS_IDXS, --print_chunks_idxs PRINT_CHUNKS_IDXS
+									--print_chunks_idxs: <bool> Set to True to print 0-based index for the end of chunks in the + line in fastq output [None]
 
 2) Basecalling of fast5 files. 
 
-	It's important to consider at least 3 GB of GPU memory for each parallel thread. For an NVIDIA-A100 40GPU 15 threads shuold be a good amount of parallel models. Here a simple command to perform inosine-aware basecalling of fast5 from dRNA (002) runs:
+	It's important to consider at least 3 GB of GPU memory for each parallel thread. For an NVIDIA-A100 40GPU 15 threads should be a good amount of parallel models. Here a simple command to perform inosine-aware basecalling of fast5 from dRNA (002) runs:
 
 		python3 NanoSpeech.py -d {fast5_folder_path} -o {fasta/fastq output file} -m {model_weigths in ./models/} -t {number of threads}
 
-	We strongly suggest to use the multi-species model named *NanoSpeech_Inosine_m23M_e71_d19Mrec_SINGLE_MOD_VER.h5* within the ./models directory of this repository. NanoSpeech will produce either a fasta or fastq file where a list of indexes of adenosines with higher probability to be inonsines is added in the header of each read. For the sake of example, below a NanoSpeech basecalled read in FASTQ format:
+	We strongly suggest to use, as starting point, the RNA002 multi-species model named *NanoSpeech_Inosine_m23M_e71_d19Mrec_SINGLE_MOD_VER.h5* within the ./models directory of this repository. NanoSpeech will produce either a fasta or fastq file where a list of indexes of adenosines with higher probability to be inonsines is added in the header of each read. For the sake of example, below a NanoSpeech basecalled read in FASTQ format:
 
 		@dc4a56dd-b899-49c4-9fc2-4bffcbe63463 2,6,9,13,14,17,20,34,37,38,40,41,43,54,58,61,65,66,68,70,74,75,77,78,82,84,85,89,92,104,105,113,118,121,122,129,134,137,138,153,156,158,162,170,172,174,180,187,191,196,199,201,204,205,207,213,218,222,231,239,241,245,246,250,252,253,254,256,264,270,271,272,273,275,277,281,284,289,301,302,303,307,309,313,316,317,322,327,330,331,333,340,343,345,348,357,361,363,364,366,367,372,373,376,385,389,391,392,394,395,400,402,403,404,409,413,417,424,425,431,442,445,446,447,453,455,461,463,466,467,471,472,479,485,486,491,497,502,504,508,511,512,517,522,525,526,528,535,538,540,543,552,556,558,559,561,562,567,569,570,571,576,580,584,591,594,595,596,602,604,610,612,615,616,620,621,632,641
 		ACAATTACCACCCAAATAACAAAACACCCACCCTACTAATAATACACAATATTAACCTACCACCAAACAAATTTAACAATCCATAAATCAACACATTATTCACTAAAACTATTAATCCACAAAACTATTAATCCACAAACACATCCTTTCTTTACTAAAATCACCCATTTACACATCTCCACTCACTATTTAATTCACCATAATAATAAAATAATCCAATATATTCCTTTCAAATAAACATACATAACATACAAAAATCTCTCAATATCAAAAACACAAACACTACAATAATTTTTCTATTAAAATTAAACTTAAAAACACCAATACACTAACATATACCAATACACAATATCAACAACTTACAACAATTACAACAATATCAACAACTTACAACAATTACACAAACACTAATTAATTACTATCCAAATATCACTAAAAACATAACAAACCATTATAATATTACACCAAATCAAAAAACCAATCCCAATCCTACATTTAAATTAAACTTAAAAACACCAATACACTAACATATACCAATACACAATATCAACAACTTACAACAATTACACAAACACTAATTAATTACTATCTAACAAACCATTATAATATTACACCAAATCAAAGCCTCATCCATTCCTACCAACCCTCCTA
@@ -193,42 +182,41 @@ The NanoSpeech basecaller is easy to use and need to be feed with a directory co
 ### **Multi Modification version** (to be preferred - pod5 ready)
 Additionally, a more complex set of scripts has been released in order to handle NanoSpeech models trained on multiple modifications. For every model in h5 format, a configuration file (models/*.h5.cfg) is coupled and contains parameters to initialize the transformer model. The main script is NanoSpeech_multi_mod.py, and it accepts the following options:
 
-	python3 /lustrehome/afonzino/NanoListener_NanoSpeech/NanoSpeech_basecaller_private/NanoSpeech_basecaller/NanoSpeech_multi_mod.py -h
-	usage: NanoSpeech_multi_mod.py [-h] -d RAW_DATA_FOLDERPATH -o OUT_FILEPATH -m MODEL_WEIGTHS [-t THREADS_N] [-c CLIP_OUTLIERS] [-u PRINT_GPU_MEMORY]
-								   [-r PRINT_READ_NAME] [-nr N_READS_TO_PROCESS] [-fl FAST5LIST_FILEPATH] [-rl READSLIST_FILEPATH] [-cl CHUNKS_LEN]
-								   [-idxs PRINT_CHUNKS_IDXS] [-f FORMAT]
-	
-	NanoSpeech basecaller: NanoSpeech_multi_mod.py v. 0.0.2
-	
-	optional arguments:
-	  -h, --help            show this help message and exit
-	  -d RAW_DATA_FOLDERPATH, --raw_data_folderpath RAW_DATA_FOLDERPATH
-							--raw_data_folderpath: a <str> with the fullpath for the input pod5/fast5 folder(file)-path containing the raw data. This works
-							in an iterative manner within the tree of a directory.
-	  -o OUT_FILEPATH, --out_filepath OUT_FILEPATH
-							--out_filepath: a <str> with the fullpath for the output fasta/fastq file generated during the basecalling.
-	  -m MODEL_WEIGTHS, --model_weigths MODEL_WEIGTHS
-							--model_weigths: a <str> with the fullpaht for the h5 file containing the weights to inizialize pretrained transformer model.
-	  -t THREADS_N, --threads_n THREADS_N
-							--threads_n: a <int> indicating the number of basecaller workers.
-	  -c CLIP_OUTLIERS, --clip_outliers CLIP_OUTLIERS
-							--clip_outliers: a <str> indicating the min-max currents value to be clipped with mean. [None]
-	  -u PRINT_GPU_MEMORY, --print_gpu_memory PRINT_GPU_MEMORY
-							--print_gpu_memory: <str> Set to True to print gpu usage for every worker starting a new read (experimental). [False]
-	  -r PRINT_READ_NAME, --print_read_name PRINT_READ_NAME
-							--print_read_name: <bool> Set to True to let producer to print reads names added to queue. [False]
-	  -nr N_READS_TO_PROCESS, --n_reads_to_process N_READS_TO_PROCESS
-							--n_reads_to_process: <int> Numer of reads to limit basecalling. [None]
-	  -fl FAST5LIST_FILEPATH, --fast5list_filepath FAST5LIST_FILEPATH
-							--fast5list_filepath: <str> Fullpath for a file with list of paths to fast5 files to limit basecalling on. [None]
-	  -rl READSLIST_FILEPATH, --readslist_filepath READSLIST_FILEPATH
-							--readslist_filepath: <str> Fullpath for a file with list of reads ids to limit basecalling on. [None]
-	  -cl CHUNKS_LEN, --chunks_len CHUNKS_LEN
-							--chunks_len: <int> Chunks lenght the generator will be output from raw signals. [None]
-	  -idxs PRINT_CHUNKS_IDXS, --print_chunks_idxs PRINT_CHUNKS_IDXS
-							--print_chunks_idxs: <bool> Set to True to print 0-based index for the end of chunks in the + line in fastq output [None]
-	  -f FORMAT, --format FORMAT
-							--format: <string> indicating which type of raw data format has been passed among fast5 or pod5. [pod5]
+	python3 NanoSpeech_multi_mod.py -h
+		usage: NanoSpeech_multi_mod.py [-h] -d RAW_DATA_FOLDERPATH -o OUT_FILEPATH -m MODEL_WEIGTHS [-t THREADS_N] [-c CLIP_OUTLIERS] [-u PRINT_GPU_MEMORY] [-r PRINT_READ_NAME]
+									   [-nr N_READS_TO_PROCESS] [-fl FAST5LIST_FILEPATH] [-rl READSLIST_FILEPATH] [-cl CHUNKS_LEN] [-idxs PRINT_CHUNKS_IDXS] [-f FORMAT]
+		
+		NanoSpeech basecaller: NanoSpeech_multi_mod.py v. 0.2.1
+		
+		optional arguments:
+		  -h, --help            show this help message and exit
+		  -d RAW_DATA_FOLDERPATH, --raw_data_folderpath RAW_DATA_FOLDERPATH
+								--raw_data_folderpath: a <str> with the fullpath for the input pod5/fast5 folder(file)-path containing the raw data. This works in an iterative
+								manner within the tree of a directory.
+		  -o OUT_FILEPATH, --out_filepath OUT_FILEPATH
+								--out_filepath: a <str> with the fullpath for the output fasta/fastq file generated during the basecalling.
+		  -m MODEL_WEIGTHS, --model_weigths MODEL_WEIGTHS
+								--model_weigths: a <str> with the fullpaht for the h5 file containing the weights to inizialize pretrained transformer model.
+		  -t THREADS_N, --threads_n THREADS_N
+								--threads_n: a <int> indicating the number of basecaller workers.
+		  -c CLIP_OUTLIERS, --clip_outliers CLIP_OUTLIERS
+								--clip_outliers: a <str> indicating the min-max currents value to be clipped with mean. [None]
+		  -u PRINT_GPU_MEMORY, --print_gpu_memory PRINT_GPU_MEMORY
+								--print_gpu_memory: <str> Set to True to print gpu usage for every worker starting a new read (experimental). [False]
+		  -r PRINT_READ_NAME, --print_read_name PRINT_READ_NAME
+								--print_read_name: <bool> Set to True to let producer to print reads names added to queue. [False]
+		  -nr N_READS_TO_PROCESS, --n_reads_to_process N_READS_TO_PROCESS
+								--n_reads_to_process: <int> Numer of reads to limit basecalling. [None]
+		  -fl FAST5LIST_FILEPATH, --fast5list_filepath FAST5LIST_FILEPATH
+								--fast5list_filepath: <str> Fullpath for a file with list of paths to fast5 files to limit basecalling on. [None]
+		  -rl READSLIST_FILEPATH, --readslist_filepath READSLIST_FILEPATH
+								--readslist_filepath: <str> Fullpath for a file with list of reads ids to limit basecalling on. [None]
+		  -cl CHUNKS_LEN, --chunks_len CHUNKS_LEN
+								--chunks_len: <int> Chunks lenght the generator will be output from raw signals. [None]
+		  -idxs PRINT_CHUNKS_IDXS, --print_chunks_idxs PRINT_CHUNKS_IDXS
+								--print_chunks_idxs: <bool> Set to True to print 0-based index for the end of chunks in the + line in fastq output [None]
+		  -f FORMAT, --format FORMAT
+								--format: <string> indicating which type of raw data format has been passed among fast5 or pod5. [pod5]
  
  Here an example command to launch the basecalling of pod5/fast5 reads using the NanoSpeech multi-mod version. The configurations will be automatically loaded from the corresponding *.h5.cfg file:
 
@@ -253,7 +241,7 @@ Also with this version, fasta/q files will contain indexes for all the modified 
 	+
 	$&,**')/--/-++,+)+-+,+)'*,)#".*&-0,*,).+,*+*++,,+++,***)),,)#$%.*)*+.-(+--*+*)+)('*+%$)*+0-*+,.-.,*,-,+,*,%++'((&#&#&'&)*+.*1-,-,,%+*##%,)'-).,+*-)+,-++--*+,,*),+++,+-.*$',)-)+-.,(,+,(+*,)++*,-,*+-+***++)'%+/0'+),,*+(+,,-++-,-,,+,,+,'*++),(**'$%*,2/,(),&,,-,*..,/&*+++*+*'&")**,*0.++0+&&*)*).-*-+,,.+*&%'##&()+&*))**-++,,++*,(*.*,-,)+)'%%#$((&*+,,*).+*.,++-*+-+++(+*)***(*,++*$""%*"(($"#-%$##&'%%*%&$#)#$)"&$#&/(-)*,+)-,,+$-)(*-,,+),%##$+.),+,+,*+++*,*,+*+),,*.+)+-+++.,+*'&'$-1*-+),,-/,,-*-++*-,-,*+,+(()(%$$$'#$%)/(,+*,,,*,,++',-*-,,++++,*+)'%#&''$$/'-+'+..,**,,+,+)**,++).,.,,,-++,+-*+,%*&#%$)))),+-)*,,)+-(,**+))+-,+(,+,-+(#,++--*-,.,**-+++++***%'(%$(&*&+()+,-++,,-+--,)++*,(*.+--**,-')*%#&)%##(,+#("''+#"*&(%#&**&((*$%'%%+&(&&('$#%,,-.(-*,**-+*-+,+,,,+,,+,+***+*,+)&#$""%'$%,'+'(+*-*+**',,*.)+/+'%$$%'($"&),*-+&+)))*-,+()$+$$#"###(.#)*--0+*+0++,,.,,*)+**,'%'&,0-+,,-*,+++()+*-+,+.-(,,)*)(''+*.,+))+,**,*,+,*,,+,+*+*'+,-+,++**++,,,+*+-,'+,*,)+'*)-')$#)$(+--+)(,,)-+-,,++++*+,-*-+*,,+*+)$,%$+,+++***+,(,,(+.+,+**+,+,++),),+*'$'--,.,).,,*+,-++++,)***,+**(+*%$(+).,++,+-+**+,(-),,**,-+-+)(++,,*(($#',)(,)+-+**+++,.,-,+,*))*+$$#$#.'*&),)*+,*,())**,+-+.*+))*)&)'%'**'$#")/+.*'.*++,,'&(%'"#+()/,,,*,*+,++++*++))+++,+,-+(,*$"#(+)+.+*--),-+).*,)+*+)*-***+**%'%#++*%(,,)+,,,,-+-+,,-,++*%#$"--*+,)*+,,-,+,-,,,+),,+()##&%$'+,)+*,++*-,*,)+--+)$&&$"%'#.+))-#,%,((+.,),*-,+'*+*&)*+&&'/(%%#%&&.*&,,'0,*-0.,+.)(#-*+0**(++(*,++-,+*++,+++,+,++,++*#((())*.-))+,)*&$+,'*.*(.,,),,-+*+,+***+)(#"#'$)&+,*-)+)-.,++++-+-++)##'&*)++),*)**,**'-(**+)()%*)')&&$#$2)+-.-++**)+++,+*.**+*,+-)#&'./+*/,.,*-+,)++-,*,+***,+&$"#$#(--&'-'*,&%""""""""$#&')"#'##$###$$$'*$&"'$##"&##&$#))0/,,-,-.+*++*+**+)++(*++**+&%%$1$&-(*+-,'++,,,+++)*++(+)),$%"#*'%'*+)0,+**++**,+,+*(,)-+*-)+*++,&##'/%)'0,,*-,++%+(+,-**/+,,*)$%%*(*--.-,*/+),,,***+,+*-,-*&&$#&#**&++*%,*,*+*)'&.,(,')(##$$$&+%"*)'(&$$,.,.,-+--+(,,+,+,*+,),++**+)+%&$#+%,-,,(+--.+,,,+,)+,+*,-'%&%&%%$-(*-'-)-+,++,),+*)*(&)""$'("$%%#($"&#"""&$#&%#"('&#$'#(*&'%($()'-%&""%#"$'&&$''%"""$'('#"#$'&,#+)&#%"%$%&#",'###%$$&&&)
 
-These generated sequences can be mapped using minimap2 using the same command defined for the single-mod script. Once the filtered, sorted and indexed BAM file is obtained, the next step is to retrieve mapping information for every modified nucletode detected:
+These generated sequences can be mapped using minimap2 using the same command defined for the single-mod script. Once the filtered, sorted and indexed BAM file is obtained, the next step is to retrieve mapping information for every modified nucleotide detected:
 
 	python3 modification_detector.py \
 		-b {BAM file} \
@@ -264,8 +252,10 @@ Both per-read and aggregated predictions will contain an additional column with 
 
 ## **Additional Information**
 
-### **Terms and Licence**:
+### **Terms and License**:
 All the provided models work only for the Nanopore libraries produced by ONT SQK-RNA001 and SQK-RNA002 kits or RNA004 and are demonstrative prototypes. The single modification model (R9: only inosine) was trained on a bigger dataset from different organisms and IVT constructs and, even if it possesses high generalization capacity, it is still a prototype. We are committed to developing production models for both R9 and RNA004 pores. The 2 modification model (R9: I + m6A) and the bigger 9 modification model (R9 see models/NanoSpeech_RNA002_16classes_9mods_m50Mplus_DS4M_E54.h5.cfg file) are prototypes trained only on synthetic IVT data. All the other models are proof-of-concept for pore RNA004 trained only on in-vitro transcribed synthetic molecules, but generalization capacities to unseen data are not ensured.
+The model *NanoSpeech_RNA004_19classes_12mods_m50M_e164chunk4_trainings_UHRRnativeIVTNativeCellsSynth_FULL_DS_FROM_DISK.h5* is an early experimental RNA004 model trained on both synthetic IVTs and human cell lines, with initial support for m6A and inosine. The model is currently undergoing testing and evaluation. Ongoing work focuses on improving its performance by training on more carefully curated and more diverse datasets. Performance and supported modifications may change in future releases.
+Please refer to the models directory for additional information and instructions on downloading the models (see the *.h5.README.txt files).
 
 Credits:
 This library adapts and utilizes the model architecture and certain functionalities from an official example code on keras.io, [Transformer ASR Example] https://github.com/keras-team/keras-io/blob/master/examples/audio/transformer_asr.py which is released under the Apache 2.0 License.
